@@ -1,0 +1,5 @@
+{
+  "name": "SA Bookkeeper AI",
+  "description": "An intelligent bookkeeping system for South African small businesses. Upload PDF bank statements to automatically generate journals, trial balances, profit & loss statements, and SARS-compliant financial statements using AI.",
+  "requestFramePermissions": []
+}

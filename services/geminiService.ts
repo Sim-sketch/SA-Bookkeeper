@@ -1,14 +1,25 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Transaction } from '../types';
 
-// FIX: Switched from Vite's `import.meta.env` to `process.env` to resolve TypeScript errors and adhere to coding guidelines, which mandate using `process.env.API_KEY`.
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-    throw new Error("API_KEY environment variable not set.");
-}
-
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+/**
+ * Retrieves the Gemini API key. It prioritizes the key from localStorage 
+ * (set by the user in the Settings UI), falling back to environment variables 
+ * for deployed environments. This provides flexibility for both local development 
+ * and production deployment.
+ * @returns The API key.
+ * @throws An error if the API key is not configured in either location.
+ */
+const getApiKey = (): string => {
+    const storedKey = localStorage.getItem('gemini_api_key');
+    if (storedKey) {
+        return storedKey;
+    }
+    // Fallback for deployed environments where the key is injected as an env var.
+    if (process.env.API_KEY) {
+        return process.env.API_KEY;
+    }
+    throw new Error("API Key not configured. Please go to the Settings page to add your Gemini API key.");
+};
 
 const analysisPrompt = `
 You are an expert South African bookkeeper AI. Your task is to analyze the provided bank statement PDF and extract all transactions. For each transaction, you must perform double-entry bookkeeping.
@@ -65,8 +76,11 @@ const responseSchema = {
     },
 };
 
-export const analyzeStatement = async (base64Pdf: string, mimeType: string): Promise<Transaction[]> => {
+export const analyzeStatement = async (base64Pdf: string, mimeType: string): Promise<Omit<Transaction, 'id'>[]> => {
     try {
+        const apiKey = getApiKey();
+        const ai = new GoogleGenAI({ apiKey });
+
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: [
@@ -95,16 +109,16 @@ export const analyzeStatement = async (base64Pdf: string, mimeType: string): Pro
             throw new Error("AI response is not a valid array.");
         }
 
-        return (transactionsData as Omit<Transaction, 'id'>[]).map(tx => ({
-            ...tx,
-            id: crypto.randomUUID(),
-        }));
+        return transactionsData as Omit<Transaction, 'id'>[];
 
     } catch (error: any) {
         console.error("Error calling Gemini API:", error);
         // Provide more granular error feedback
         if (error.message?.includes('API key not valid')) {
-            throw new Error("Invalid API Key. Please check your credentials.");
+            throw new Error("Your API Key is not valid. Please check it in the Settings page.");
+        }
+         if (error.message?.includes('API key is not set')) {
+            throw error; // Re-throw the specific error from getApiKey
         }
         if (error.message?.includes('billing')) {
             throw new Error("There seems to be an issue with your Google AI billing account.");
@@ -134,6 +148,9 @@ ${JSON.stringify(transactions, null, 2)}
 `;
 
     try {
+        const apiKey = getApiKey();
+        const ai = new GoogleGenAI({ apiKey });
+
         const response = await ai.models.generateContent({
             model: "gemini-2.5-pro",
             contents: prompt,
@@ -172,6 +189,9 @@ export const suggestCategorization = async (description: string, amount: number,
     `;
 
     try {
+        const apiKey = getApiKey();
+        const ai = new GoogleGenAI({ apiKey });
+
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: [{ parts: [{ text: prompt }] }],
@@ -204,6 +224,9 @@ ${JSON.stringify(transactions, null, 2)}
 `;
 
     try {
+        const apiKey = getApiKey();
+        const ai = new GoogleGenAI({ apiKey });
+
         const response = await ai.models.generateContent({
             model: "gemini-2.5-pro",
             contents: prompt,

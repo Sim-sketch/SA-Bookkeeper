@@ -5,6 +5,12 @@ import { Transaction, CategorizationRule } from '../types';
 const handleSupabaseError = (error: any, context: string) => {
     if (error) {
         console.error(`Error in ${context}:`, error);
+        // Check for PostgREST error code for a missing table.
+        if (error.code === '42P01') {
+            const missingTable = error.message.match(/relation "public\.(.*?)" does not exist/)?.[1];
+            // Throw a specific error that the frontend can catch to show the setup guide.
+            throw new Error(`DB_SETUP_REQUIRED: The '${missingTable || 'required'}' table is missing from your database. Please run the setup script in 'docs/schema.sql'.`);
+        }
         throw new Error(error.message);
     }
 };
@@ -61,6 +67,30 @@ export const saveAllTransactions = async (supabase: SupabaseClient, userId: stri
         .insert(transactionsToInsert);
 
     handleSupabaseError(error, 'saveAllTransactions');
+};
+
+// Delete multiple transactions by their IDs
+export const deleteTransactions = async (supabase: SupabaseClient, userId: string, ids: string[]): Promise<void> => {
+    const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .in('id', ids)
+        .eq('user_id', userId);
+
+    handleSupabaseError(error, 'deleteTransactions');
+};
+
+// Update multiple transactions by their IDs
+export const updateTransactions = async (supabase: SupabaseClient, userId: string, ids: string[], updateData: Partial<Omit<Transaction, 'id'>>): Promise<Transaction[]> => {
+    const { data, error } = await supabase
+        .from('transactions')
+        .update(updateData)
+        .in('id', ids)
+        .eq('user_id', userId)
+        .select();
+
+    handleSupabaseError(error, 'updateTransactions');
+    return data || [];
 };
 
 

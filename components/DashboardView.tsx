@@ -16,19 +16,19 @@ interface DashboardViewProps {
 }
 
 const KpiCard: React.FC<{ title: string; value: string; icon: React.ReactNode; colorClass: string }> = ({ title, value, icon, colorClass }) => (
-    <div className="bg-white dark:bg-slate-800/50 rounded-lg p-4 flex items-center gap-4 shadow">
+    <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
         <div className={`w-12 h-12 rounded-full flex items-center justify-center ${colorClass}`}>
             {icon}
         </div>
         <div>
-            <p className="text-sm text-gray-500 dark:text-slate-400">{title}</p>
-            <p className="text-2xl font-bold font-mono">{value}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{title}</p>
+            <p className="text-2xl font-bold font-mono text-slate-800 dark:text-slate-100">{value}</p>
         </div>
     </div>
 );
 
 const ChartContainer: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-    <div className="bg-white dark:bg-slate-800/50 rounded-lg shadow-lg p-4 md:p-6 min-h-[400px]">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 md:p-6 min-h-[400px]">
         <h3 className="text-xl font-bold text-teal-600 dark:text-teal-300 mb-4">{title}</h3>
         {children}
     </div>
@@ -39,9 +39,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onFileAnalysis, transacti
 
     if (transactions.length === 0) {
         return (
-            <div className="bg-white dark:bg-slate-800/50 rounded-lg p-6 text-center max-w-2xl mx-auto">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 text-center max-w-2xl mx-auto">
+                <AnalysisIcon className="w-16 h-16 mx-auto text-teal-400 mb-4" />
                 <h2 className="text-2xl font-bold text-teal-600 dark:text-teal-300 mb-4">Welcome to SA Bookkeeper AI</h2>
-                <p className="text-gray-500 dark:text-slate-400 mb-6">
+                <p className="text-slate-500 dark:text-slate-400 mb-6">
                     You have no transactions yet.
                     <br />
                     Upload your first bank statement to get started.
@@ -89,7 +90,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ onFileAnalysis, transacti
     const PIE_COLORS = ['#f87171', '#fb923c', '#facc15', '#a3e635', '#4ade80', '#38bdf8', '#818cf8'];
 
     const axisColor = theme === 'dark' ? '#94a3b8' : '#64748b';
-    const gridColor = theme === 'dark' ? '#475569' : '#e2e8f0';
+    const gridColor = theme === 'dark' ? '#334155' : '#e2e8f0';
     const tooltipStyle = {
         backgroundColor: theme === 'dark' ? '#1e293b' : '#ffffff',
         border: `1px solid ${theme === 'dark' ? '#334155' : '#e2e8f0'}`,

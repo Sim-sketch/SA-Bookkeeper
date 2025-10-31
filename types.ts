@@ -9,6 +9,7 @@ export enum View {
     ANALYSIS = 'ANALYSIS',
     RULES = 'RULES',
     AI_CHAT = 'AI_CHAT',
+    SETTINGS = 'SETTINGS',
 }
 
 export interface Transaction {

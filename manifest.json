@@ -1,0 +1,21 @@
+{
+  "name": "SA Bookkeeper AI",
+  "short_name": "BookkeeperAI",
+  "description": "An intelligent bookkeeping system for South African small businesses. Upload PDF bank statements to automatically generate journals, trial balances, profit & loss statements, and SARS-compliant financial statements using AI.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#14b8a6",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

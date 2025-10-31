@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { Transaction } from '../types';
 import { suggestCategorization } from '../services/geminiService';
@@ -19,6 +17,10 @@ const initialFormState = {
     creditAccount: '',
     category: '',
 };
+
+const formInputClasses = "w-full bg-slate-100 dark:bg-slate-700/50 border border-slate-300 dark:border-slate-600/50 rounded-md px-3 py-2 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition";
+const btnPrimaryClasses = "inline-flex justify-center items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+const btnSecondaryClasses = "inline-flex justify-center items-center rounded-md bg-slate-200 dark:bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 shadow-sm hover:bg-slate-300 dark:hover:bg-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 const ManualTransactionForm: React.FC<ManualTransactionFormProps> = ({ onAddTransaction }) => {
     const [formData, setFormData] = useState(initialFormState);
@@ -72,86 +74,32 @@ const ManualTransactionForm: React.FC<ManualTransactionFormProps> = ({ onAddTran
     };
 
     return (
-        <div className="bg-white dark:bg-slate-800/50 rounded-lg shadow-lg p-4 md:p-6">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-6">
             <h3 className="text-lg font-bold text-teal-600 dark:text-teal-300 mb-4">Add Manual Transaction</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <input type="date" name="date" value={formData.date} onChange={handleChange} className="form-input" required />
-                    <input type="text" name="description" value={formData.description} onChange={handleChange} placeholder="Description (e.g., Office supplies from CNA)" className="form-input md:col-span-2" required />
-                    <input type="number" name="amount" value={formData.amount} onChange={handleChange} placeholder="Amount (R)" className="form-input" required step="0.01" />
+                    <input type="date" name="date" value={formData.date} onChange={handleChange} className={formInputClasses} required />
+                    <input type="text" name="description" value={formData.description} onChange={handleChange} placeholder="Description (e.g., Office supplies from CNA)" className={`${formInputClasses} md:col-span-2`} required />
+                    <input type="number" name="amount" value={formData.amount} onChange={handleChange} placeholder="Amount (R)" className={formInputClasses} required step="0.01" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                    <select name="type" value={formData.type} onChange={handleChange} className="form-input">
+                    <select name="type" value={formData.type} onChange={handleChange} className={formInputClasses}>
                         <option value="Debit">Money Out</option>
                         <option value="Credit">Money In</option>
                     </select>
-                    <input type="text" name="debitAccount" value={formData.debitAccount} onChange={handleChange} placeholder="Debit Account" className="form-input" required />
-                    <input type="text" name="creditAccount" value={formData.creditAccount} onChange={handleChange} placeholder="Credit Account" className="form-input" required />
-                    <input type="text" name="category" value={formData.category} onChange={handleChange} placeholder="Category" className="form-input" required />
+                    <input type="text" name="debitAccount" value={formData.debitAccount} onChange={handleChange} placeholder="Debit Account" className={formInputClasses} required />
+                    <input type="text" name="creditAccount" value={formData.creditAccount} onChange={handleChange} placeholder="Credit Account" className={formInputClasses} required />
+                    <input type="text" name="category" value={formData.category} onChange={handleChange} placeholder="Category" className={formInputClasses} required />
                 </div>
                  {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                     <button type="submit" className="btn-primary flex-grow">Add Transaction</button>
-                     <button type="button" onClick={handleSuggest} disabled={isSuggesting} className="btn-secondary flex-grow flex items-center justify-center gap-2">
+                     <button type="submit" className={`${btnPrimaryClasses} flex-grow`}>Add Transaction</button>
+                     <button type="button" onClick={handleSuggest} disabled={isSuggesting} className={`${btnSecondaryClasses} flex-grow flex items-center justify-center gap-2`}>
                         {isSuggesting ? <Spinner /> : <WandIcon className="w-4 h-4" />}
                         {isSuggesting ? 'Thinking...' : 'AI Suggest'}
                      </button>
                 </div>
             </form>
-            {/* FIX: Removed unsupported `jsx` prop from style tag. */}
-            <style>{`
-                .dark .form-input {
-                    background-color: #334155; /* slate-700 */
-                    border-color: #475569; /* slate-600 */
-                    color: white;
-                }
-                .form-input {
-                    background-color: #f1f5f9; /* slate-100 */
-                    border: 1px solid #cbd5e1; /* slate-300 */
-                    border-radius: 0.375rem;
-                    padding: 0.5rem 0.75rem;
-                    font-size: 0.875rem;
-                    color: #1e293b; /* slate-800 */
-                    width: 100%;
-                }
-                .form-input:focus {
-                    outline: none;
-                    box-shadow: 0 0 0 2px #14b8a6; /* ring-2 ring-teal-500 */
-                    border-color: #14b8a6;
-                }
-                .btn-primary {
-                     background-color: #14b8a6; /* teal-500 */
-                     color: white;
-                     padding: 0.5rem 1rem;
-                     border-radius: 0.375rem;
-                     font-weight: 500;
-                     transition: background-color 0.2s;
-                }
-                .btn-primary:hover {
-                    background-color: #0d9488; /* teal-600 */
-                }
-                .dark .btn-secondary {
-                    background-color: #475569; /* slate-600 */
-                }
-                .dark .btn-secondary:hover {
-                    background-color: #64748b; /* slate-500 */
-                }
-                .btn-secondary {
-                     background-color: #e2e8f0; /* slate-200 */
-                     color: #334155; /* slate-700 */
-                     padding: 0.5rem 1rem;
-                     border-radius: 0.375rem;
-                     font-weight: 500;
-                     transition: background-color 0.2s;
-                }
-                .btn-secondary:hover {
-                    background-color: #cbd5e1; /* slate-300 */
-                }
-                .btn-secondary:disabled {
-                    opacity: 0.6;
-                    cursor: not-allowed;
-                }
-            `}</style>
         </div>
     );
 };

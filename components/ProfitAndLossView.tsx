@@ -16,7 +16,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ data }) => {
     ];
     
     const axisColor = theme === 'dark' ? '#94a3b8' : '#64748b';
-    const gridColor = theme === 'dark' ? '#475569' : '#e2e8f0';
+    const gridColor = theme === 'dark' ? '#334155' : '#e2e8f0';
     const tooltipStyle = {
         backgroundColor: theme === 'dark' ? '#1e293b' : '#ffffff',
         border: `1px solid ${theme === 'dark' ? '#334155' : '#e2e8f0'}`,
@@ -28,13 +28,13 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ data }) => {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-slate-800/50 rounded-lg shadow-lg p-4 md:p-6">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-6">
                 <h2 className="text-xl font-bold text-teal-600 dark:text-teal-300 mb-4">Profit & Loss Statement</h2>
                 
                 <div className="mb-6">
                     <h3 className="text-lg font-semibold text-green-600 dark:text-green-400 mb-2">Revenue</h3>
                     {Object.entries(revenues).map(([account, amount]) => (
-                        <div key={account} className="flex justify-between py-1 border-b border-gray-200 dark:border-slate-700/50">
+                        <div key={account} className="flex justify-between py-1.5 border-b border-slate-200/80 dark:border-slate-800/80">
                             <span>{account}</span>
                             {/* FIX: Cast amount to number because Object.entries can produce 'unknown' values from indexed types. */}
                             <span className="font-mono">R {(amount as number).toFixed(2)}</span>
@@ -49,7 +49,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ data }) => {
                 <div className="mb-6">
                     <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">Expenses</h3>
                     {Object.entries(expenses).map(([account, amount]) => (
-                        <div key={account} className="flex justify-between py-1 border-b border-gray-200 dark:border-slate-700/50">
+                        <div key={account} className="flex justify-between py-1.5 border-b border-slate-200/80 dark:border-slate-800/80">
                             <span>{account}</span>
                             {/* FIX: Cast amount to number because Object.entries can produce 'unknown' values from indexed types. */}
                             <span className="font-mono">R {(amount as number).toFixed(2)}</span>
@@ -66,7 +66,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ data }) => {
                     <span className="font-mono">R {netProfit.toFixed(2)}</span>
                 </div>
             </div>
-            <div className="bg-white dark:bg-slate-800/50 rounded-lg shadow-lg p-4 md:p-6 min-h-[400px]">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-6 min-h-[400px]">
                 <h2 className="text-xl font-bold text-teal-600 dark:text-teal-300 mb-4">Visual Summary</h2>
                  <ResponsiveContainer width="100%" height={350}>
                     <BarChart data={chartData} margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>

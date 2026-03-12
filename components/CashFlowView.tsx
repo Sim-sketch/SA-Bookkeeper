@@ -1,57 +1,65 @@
 import React from 'react';
-import { CashFlowData } from '../types';
+import { CashFlowData } from '../types.ts';
 
 interface CashFlowViewProps {
     data: CashFlowData;
+    showAmounts?: boolean;
 }
 
-const ActivitySection: React.FC<{ title: string; activities: { [key: string]: number }; total: number; titleClass: string }> = ({ title, activities, total, titleClass }) => (
+const ActivitySection: React.FC<{ title: string; activities: { [key: string]: number }; total: number; titleClass: string; showAmounts: boolean }> = ({ title, activities, total, titleClass, showAmounts }) => (
     <div className="mb-6">
         <h3 className={`text-lg font-semibold mb-2 ${titleClass}`}>{title}</h3>
         {Object.entries(activities).map(([account, amount]) => (
             <div key={account} className="flex justify-between py-1.5 border-b border-slate-200/80 dark:border-slate-800/80">
                 <span>{account}</span>
                 <span className={`font-mono ${(amount as number) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {/* FIX: Cast amount to number because Object.entries can produce 'unknown' values from indexed types. */}
-                    R {(amount as number).toFixed(2)}
+                    {showAmounts ? `R ${(amount as number).toFixed(2)}` : '****'}
                 </span>
             </div>
         ))}
         <div className="flex justify-between py-2 font-bold mt-2">
             <span>Net cash from {title}</span>
-            <span className={`font-mono ${total >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>R {total.toFixed(2)}</span>
+            <span className={`font-mono ${total >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                {showAmounts ? `R ${total.toFixed(2)}` : '****'}
+            </span>
         </div>
     </div>
 );
 
-const CashFlowView: React.FC<CashFlowViewProps> = ({ data }) => {
+const CashFlowView: React.FC<CashFlowViewProps> = ({ data, showAmounts = true }) => {
     const { 
         operatingActivities, investingActivities, financingActivities,
         totalOperating, totalInvesting, totalFinancing,
         netCashFlow, startingBankBalance, endingBankBalance
     } = data;
+
+    const formatAmount = (amount: number) => {
+        return showAmounts ? `R ${amount.toFixed(2)}` : '****';
+    };
     
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-6">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
             <h2 className="text-xl font-bold text-teal-600 dark:text-teal-300 mb-2">Statement of Cash Flows</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">For the period ending [Date]</p>
             
-            <ActivitySection title="Operating Activities" activities={operatingActivities} total={totalOperating} titleClass="text-green-600 dark:text-green-400" />
-            <ActivitySection title="Investing Activities" activities={investingActivities} total={totalInvesting} titleClass="text-blue-600 dark:text-blue-400" />
-            <ActivitySection title="Financing Activities" activities={financingActivities} total={totalFinancing} titleClass="text-orange-600 dark:text-orange-400" />
+            <ActivitySection title="Operating Activities" activities={operatingActivities} total={totalOperating} titleClass="text-green-600 dark:text-green-400" showAmounts={showAmounts} />
+            <ActivitySection title="Investing Activities" activities={investingActivities} total={totalInvesting} titleClass="text-blue-600 dark:text-blue-400" showAmounts={showAmounts} />
+            <ActivitySection title="Financing Activities" activities={financingActivities} total={totalFinancing} titleClass="text-orange-600 dark:text-orange-400" showAmounts={showAmounts} />
 
             <div className="mt-6 border-t-2 border-teal-500 pt-4 space-y-2">
                  <div className="flex justify-between py-1 text-md">
                     <span>Net Increase / (Decrease) in Cash</span>
-                    <span className={`font-mono font-semibold ${netCashFlow >= 0 ? 'text-slate-800 dark:text-white' : 'text-red-600 dark:text-red-300'}`}>R {netCashFlow.toFixed(2)}</span>
+                    <span className={`font-mono font-semibold ${netCashFlow >= 0 ? 'text-slate-800 dark:text-white' : 'text-red-600 dark:text-red-300'}`}>
+                        {formatAmount(netCashFlow)}
+                    </span>
                 </div>
                  <div className="flex justify-between py-1 text-md text-slate-600 dark:text-slate-300">
                     <span>Cash at Beginning of Period</span>
-                    <span className="font-mono">R {startingBankBalance.toFixed(2)}</span>
+                    <span className="font-mono">{formatAmount(startingBankBalance)}</span>
                 </div>
                  <div className="flex justify-between py-2 font-bold text-lg rounded-md px-3 mt-2 bg-slate-100 dark:bg-slate-800/50">
                     <span>Cash at End of Period</span>
-                    <span className="font-mono">R {endingBankBalance.toFixed(2)}</span>
+                    <span className="font-mono">{formatAmount(endingBankBalance)}</span>
                 </div>
             </div>
 

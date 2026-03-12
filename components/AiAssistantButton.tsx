@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChatIcon } from './icons/ChatIcon';
+import { ChatIcon } from './icons/ChatIcon.tsx';
 
 interface AiAssistantButtonProps {
     onClick: () => void;

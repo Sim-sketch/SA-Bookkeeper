@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Transaction } from '../types';
-import { suggestCategorization } from '../services/geminiService';
-import Spinner from './Spinner';
-import { WandIcon } from './icons/WandIcon';
+import { Transaction, TAX_CATEGORIES, TRANSACTION_CATEGORIES } from '../types.ts';
+import { suggestCategorization } from '../services/geminiService.ts';
+import Spinner from './Spinner.tsx';
+import { WandIcon } from './icons/WandIcon.tsx';
 
 interface ManualTransactionFormProps {
     onAddTransaction: (transaction: Omit<Transaction, 'id'>) => void;
+    knownAccounts?: string[];
 }
 
 const initialFormState = {
@@ -15,14 +16,14 @@ const initialFormState = {
     type: 'Debit' as 'Debit' | 'Credit',
     debitAccount: '',
     creditAccount: '',
-    category: '',
+    category: 'Operating Expense',
+    taxCategory: 'VAT Standard Rate (15%)',
 };
 
-const formInputClasses = "w-full bg-slate-100 dark:bg-slate-700/50 border border-slate-300 dark:border-slate-600/50 rounded-md px-3 py-2 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition";
-const btnPrimaryClasses = "inline-flex justify-center items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
-const btnSecondaryClasses = "inline-flex justify-center items-center rounded-md bg-slate-200 dark:bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 shadow-sm hover:bg-slate-300 dark:hover:bg-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+const formInputClasses = "w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition shadow-sm";
+const labelClasses = "block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5";
 
-const ManualTransactionForm: React.FC<ManualTransactionFormProps> = ({ onAddTransaction }) => {
+const ManualTransactionForm: React.FC<ManualTransactionFormProps> = ({ onAddTransaction, knownAccounts = [] }) => {
     const [formData, setFormData] = useState(initialFormState);
     const [isSuggesting, setIsSuggesting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -33,8 +34,8 @@ const ManualTransactionForm: React.FC<ManualTransactionFormProps> = ({ onAddTran
     };
 
     const handleSuggest = async () => {
-        if (!formData.description || !formData.amount) {
-            setError("Please enter a description and amount first.");
+        if (!formData.description) {
+            setError("Please enter a description (e.g. 'Checkers Groceries') first.");
             return;
         }
         setIsSuggesting(true);
@@ -42,12 +43,12 @@ const ManualTransactionForm: React.FC<ManualTransactionFormProps> = ({ onAddTran
         try {
             const suggestion = await suggestCategorization(
                 formData.description, 
-                parseFloat(formData.amount), 
+                parseFloat(formData.amount) || 0, 
                 formData.type
             );
             setFormData(prev => ({ ...prev, ...suggestion }));
         } catch (e: any) {
-            setError(e.message);
+            setError("AI could not suggest categories. Please fill manually.");
         } finally {
             setIsSuggesting(false);
         }
@@ -55,9 +56,9 @@ const ManualTransactionForm: React.FC<ManualTransactionFormProps> = ({ onAddTran
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const { date, description, amount, type, debitAccount, creditAccount, category } = formData;
-        if (!date || !description || !amount || !debitAccount || !creditAccount || !category) {
-            setError("Please fill all fields before adding.");
+        const { date, description, amount, type, debitAccount, creditAccount, category, taxCategory } = formData;
+        if (!date || !description || !amount || !debitAccount || !creditAccount) {
+            setError("Please fill all mandatory fields.");
             return;
         }
         onAddTransaction({
@@ -68,36 +69,86 @@ const ManualTransactionForm: React.FC<ManualTransactionFormProps> = ({ onAddTran
             debitAccount,
             creditAccount,
             category,
+            taxCategory: taxCategory as any,
         });
-        setFormData(initialFormState); // Reset form
+        setFormData({ ...initialFormState, date: new Date().toISOString().split('T')[0] });
         setError(null);
     };
 
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-6">
-            <h3 className="text-lg font-bold text-teal-600 dark:text-teal-300 mb-4">Add Manual Transaction</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+            <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white">Record Transaction</h3>
+                <button 
+                    type="button" 
+                    onClick={handleSuggest} 
+                    disabled={isSuggesting || !formData.description} 
+                    className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 rounded-full hover:bg-teal-100 transition-colors disabled:opacity-50"
+                >
+                    {isSuggesting ? <Spinner className="w-3 h-3" /> : <WandIcon className="w-3.5 h-3.5" />}
+                    {isSuggesting ? 'Analyzing...' : 'AI Categorize'}
+                </button>
+            </div>
+            
+            <datalist id="known-accounts">
+                {knownAccounts.map(acc => <option key={acc} value={acc} />)}
+            </datalist>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
+                    <div className="lg:col-span-2">
+                        <label className={labelClasses}>Date</label>
+                        <input type="date" name="date" value={formData.date} onChange={handleChange} className={formInputClasses} required />
+                    </div>
+                    <div className="lg:col-span-5">
+                        <label className={labelClasses}>Description</label>
+                        <input type="text" name="description" value={formData.description} onChange={handleChange} placeholder="e.g., FNB Monthly Fee" className={formInputClasses} required />
+                    </div>
+                    <div className="lg:col-span-3">
+                        <label className={labelClasses}>Amount (ZAR)</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-2.5 text-slate-400 text-sm">R</span>
+                            <input type="number" name="amount" value={formData.amount} onChange={handleChange} placeholder="0.00" className={`${formInputClasses} pl-8`} required step="0.01" />
+                        </div>
+                    </div>
+                    <div className="lg:col-span-2">
+                        <label className={labelClasses}>Type</label>
+                        <select name="type" value={formData.type} onChange={handleChange} className={formInputClasses}>
+                            <option value="Debit">Money Out</option>
+                            <option value="Credit">Money In</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <input type="date" name="date" value={formData.date} onChange={handleChange} className={formInputClasses} required />
-                    <input type="text" name="description" value={formData.description} onChange={handleChange} placeholder="Description (e.g., Office supplies from CNA)" className={`${formInputClasses} md:col-span-2`} required />
-                    <input type="number" name="amount" value={formData.amount} onChange={handleChange} placeholder="Amount (R)" className={formInputClasses} required step="0.01" />
+                    <div>
+                        <label className={labelClasses}>Debit Account</label>
+                        <input type="text" name="debitAccount" value={formData.debitAccount} onChange={handleChange} placeholder="e.g. Bank Charges" className={formInputClasses} required list="known-accounts" />
+                    </div>
+                    <div>
+                        <label className={labelClasses}>Credit Account</label>
+                        <input type="text" name="creditAccount" value={formData.creditAccount} onChange={handleChange} placeholder="e.g. Bank" className={formInputClasses} required list="known-accounts" />
+                    </div>
+                    <div>
+                        <label className={labelClasses}>Category</label>
+                        <select name="category" value={formData.category} onChange={handleChange} className={formInputClasses}>
+                            {TRANSACTION_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className={labelClasses}>Tax Code</label>
+                        <select name="taxCategory" value={formData.taxCategory} onChange={handleChange} className={formInputClasses}>
+                            {TAX_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        </select>
+                    </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                    <select name="type" value={formData.type} onChange={handleChange} className={formInputClasses}>
-                        <option value="Debit">Money Out</option>
-                        <option value="Credit">Money In</option>
-                    </select>
-                    <input type="text" name="debitAccount" value={formData.debitAccount} onChange={handleChange} placeholder="Debit Account" className={formInputClasses} required />
-                    <input type="text" name="creditAccount" value={formData.creditAccount} onChange={handleChange} placeholder="Credit Account" className={formInputClasses} required />
-                    <input type="text" name="category" value={formData.category} onChange={handleChange} placeholder="Category" className={formInputClasses} required />
-                </div>
-                 {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                     <button type="submit" className={`${btnPrimaryClasses} flex-grow`}>Add Transaction</button>
-                     <button type="button" onClick={handleSuggest} disabled={isSuggesting} className={`${btnSecondaryClasses} flex-grow flex items-center justify-center gap-2`}>
-                        {isSuggesting ? <Spinner /> : <WandIcon className="w-4 h-4" />}
-                        {isSuggesting ? 'Thinking...' : 'AI Suggest'}
-                     </button>
+
+                {error && <p className="text-xs text-red-500 font-medium bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-100 dark:border-red-800">{error}</p>}
+
+                <div className="flex justify-end pt-2">
+                    <button type="submit" className="px-8 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold shadow-lg shadow-teal-600/20 transition-all transform active:scale-95">
+                        Add Entry
+                    </button>
                 </div>
             </form>
         </div>

@@ -1,8 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
-import { SupabaseProvider } from './contexts/SupabaseContext';
-import { ThemeProvider } from './contexts/ThemeContext';
+import './index.css';
+import App from './App.tsx';
+import { AuthProvider } from './contexts/AuthContext.tsx';
+import { ThemeProvider } from './contexts/ThemeContext.tsx';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -13,9 +14,9 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
     <React.StrictMode>
         <ThemeProvider>
-            <SupabaseProvider>
+            <AuthProvider>
                 <App />
-            </SupabaseProvider>
+            </AuthProvider>
         </ThemeProvider>
     </React.StrictMode>
 );

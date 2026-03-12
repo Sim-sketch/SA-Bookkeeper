@@ -1,9 +1,8 @@
-
-import { Transaction, TrialBalance, PnlData, BalanceSheetData, AccountBalance, CashFlowData } from './types';
+import { Transaction, TrialBalance, PnlData, BalanceSheetData, AccountBalance, CashFlowData } from '../types.ts';
 
 const isAssetOrExpense = (account: string): boolean => {
     const lowerAccount = account.toLowerCase();
-    return lowerAccount.includes('expense') || lowerAccount.includes('bank') || lowerAccount.includes('drawings') || lowerAccount.includes('assets');
+    return lowerAccount.includes('expense') || lowerAccount.includes('bank') || lowerAccount.includes('drawings') || lowerAccount.includes('assets') || lowerAccount.includes('cost of sales');
 };
 
 const isLiabilityEquityOrRevenue = (account: string): boolean => {
@@ -83,25 +82,42 @@ export const generateTrialBalance = (transactions: Transaction[]): TrialBalance 
 
 export const generateProfitAndLoss = (transactions: Transaction[]): PnlData => {
     const revenues: { [key: string]: number } = {};
-    const expenses: { [key: string]: number } = {};
+    const costOfSales: { [key: string]: number } = {};
+    const operatingExpenses: { [key: string]: number } = {};
     
     transactions.forEach(tx => {
-        if (tx.category.toLowerCase() === 'revenue') {
+        const cat = tx.category.toLowerCase();
+        if (cat === 'revenue' || cat === 'other income') {
             const revenueAccount = tx.creditAccount;
             if (!revenues[revenueAccount]) revenues[revenueAccount] = 0;
             revenues[revenueAccount] += tx.amount;
-        } else if (tx.category.toLowerCase() === 'operating expense') {
+        } else if (cat === 'cost of sales') {
+            const cosAccount = tx.debitAccount;
+            if (!costOfSales[cosAccount]) costOfSales[cosAccount] = 0;
+            costOfSales[cosAccount] += tx.amount;
+        } else if (cat === 'operating expense') {
             const expenseAccount = tx.debitAccount;
-            if (!expenses[expenseAccount]) expenses[expenseAccount] = 0;
-            expenses[expenseAccount] += tx.amount;
+            if (!operatingExpenses[expenseAccount]) operatingExpenses[expenseAccount] = 0;
+            operatingExpenses[expenseAccount] += tx.amount;
         }
     });
 
     const totalRevenue = Object.values(revenues).reduce((sum, amount) => sum + amount, 0);
-    const totalExpenses = Object.values(expenses).reduce((sum, amount) => sum + amount, 0);
-    const netProfit = totalRevenue - totalExpenses;
+    const totalCostOfSales = Object.values(costOfSales).reduce((sum, amount) => sum + amount, 0);
+    const grossProfit = totalRevenue - totalCostOfSales;
+    const totalOperatingExpenses = Object.values(operatingExpenses).reduce((sum, amount) => sum + amount, 0);
+    const netProfit = grossProfit - totalOperatingExpenses;
 
-    return { revenues, expenses, totalRevenue, totalExpenses, netProfit };
+    return { 
+        revenues, 
+        costOfSales, 
+        operatingExpenses, 
+        totalRevenue, 
+        totalCostOfSales, 
+        grossProfit, 
+        totalOperatingExpenses, 
+        netProfit 
+    };
 };
 
 
@@ -153,11 +169,11 @@ export const generateCashFlowStatement = (transactions: Transaction[], trialBala
         const account = isCashInflow ? tx.creditAccount : tx.debitAccount;
         const category = tx.category.toLowerCase();
 
-        if (category === 'revenue' || category === 'operating expense') {
+        if (category === 'revenue' || category === 'operating expense' || category === 'cost of sales' || category === 'other income') {
             operatingActivities[account] = (operatingActivities[account] || 0) + cashAmount;
-        } else if (category === 'investing') {
+        } else if (category === 'investing' || category === 'asset') {
             investingActivities[account] = (investingActivities[account] || 0) + cashAmount;
-        } else if (category === 'financing' || account.toLowerCase().includes('capital') || account.toLowerCase().includes('drawings')) {
+        } else if (category === 'financing' || category === 'liability' || category === 'equity' || account.toLowerCase().includes('capital') || account.toLowerCase().includes('drawings')) {
             financingActivities[account] = (financingActivities[account] || 0) + cashAmount;
         }
     });

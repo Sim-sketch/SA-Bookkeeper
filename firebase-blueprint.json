@@ -1,0 +1,103 @@
+{
+  "entities": {
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A financial transaction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "type": { "type": "string", "enum": ["Income", "Expense"] },
+        "status": { "type": "string", "enum": ["Reconciled", "Unreconciled", "Pending"] },
+        "reference": { "type": "string" },
+        "taxCategory": { "type": "string" },
+        "vatAmount": { "type": "number" },
+        "netAmount": { "type": "number" }
+      },
+      "required": ["id", "date", "description", "amount", "type"]
+    },
+    "CategorizationRule": {
+      "title": "Categorization Rule",
+      "description": "A rule to automatically categorize transactions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pattern": { "type": "string" },
+        "category": { "type": "string" },
+        "taxCategory": { "type": "string" }
+      },
+      "required": ["id", "pattern", "category"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "A customer or client",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "vatNumber": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "A staff member",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "position": { "type": "string" },
+        "salary": { "type": "number" },
+        "idNumber": { "type": "string" },
+        "taxNumber": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "email"]
+    },
+    "CompanySettings": {
+      "title": "Company Settings",
+      "description": "Global settings for the company",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string" },
+        "invoiceCounter": { "type": "number" },
+        "invoicePrefix": { "type": "string" },
+        "quoteCounter": { "type": "number" },
+        "quotePrefix": { "type": "string" },
+        "poCounter": { "type": "number" },
+        "poPrefix": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}/transactions": {
+      "schema": "Transaction",
+      "description": "User's financial transactions"
+    },
+    "/users/{userId}/rules": {
+      "schema": "CategorizationRule",
+      "description": "User's categorization rules"
+    },
+    "/users/{userId}/customers": {
+      "schema": "Customer",
+      "description": "User's customers"
+    },
+    "/users/{userId}/employees": {
+      "schema": "Employee",
+      "description": "User's employees"
+    },
+    "/users/{userId}/settings": {
+      "schema": "CompanySettings",
+      "description": "User's company settings"
+    }
+  }
+}

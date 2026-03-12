@@ -1,398 +1,439 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { View, Transaction, CategorizationRule, TrialBalance, PnlData, BalanceSheetData, CashFlowData } from './types';
-import Header from './components/Header';
-import Navigation from './components/Navigation';
-import JournalView from './components/JournalView';
-import TrialBalanceView from './components/TrialBalanceView';
-import ProfitAndLossView from './components/ProfitAndLossView';
-import FinancialStatementsView from './components/FinancialStatementsView';
-import AnalysisView from './components/AnalysisView';
-import RulesView from './components/RulesView';
-import CashFlowView from './components/CashFlowView';
-import ActionToolbar from './components/ActionToolbar';
-import Spinner from './components/Spinner';
-import DashboardView from './components/DashboardView';
-import AiChatView from './components/AiChatView';
-import AuthView from './components/AuthView';
-import SettingsView, { Settings } from './components/SettingsView';
-import { analyzeStatement, generateFinancialAnalysis } from './services/geminiService';
-import { generateProfitAndLoss, generateTrialBalance, generateBalanceSheet, generateCashFlowStatement } from './utils/accounting';
-import { Session } from '@supabase/supabase-js';
-import { getTransactions, addTransaction, updateTransaction, getRules, addRule, deleteRule, saveAllTransactions, deleteTransactions, updateTransactions } from './services/databaseService';
-import { useSupabase } from './contexts/SupabaseContext';
-import AiAssistantButton from './components/AiAssistantButton';
-import { XIcon } from './components/icons/XIcon';
 
+import React, { useState, useEffect, useMemo } from 'react';
+import { useAuth } from './contexts/AuthContext.tsx';
+import { View, Transaction, CategorizationRule, Customer, Employee, Task, StoredFile, FinancialAnalysis, TeamMember, CompanySettings, AnalyzedStatement, AnalyzedReceipt } from './types.ts';
 
-const applyCategorizationRules = (transactions: Omit<Transaction, 'id'>[], rules: CategorizationRule[]): Omit<Transaction, 'id'>[] => {
-    if (rules.length === 0) return transactions;
+// Components
+import Header from './components/Header.tsx';
+import Navigation from './components/Navigation.tsx';
+import Footer from './components/Footer.tsx';
+import LoadingOverlay from './components/LoadingOverlay.tsx';
+import AiAssistantButton from './components/AiAssistantButton.tsx';
+import AuthView from './components/AuthView.tsx';
+import StatementPreviewModal from './components/StatementPreviewModal.tsx';
+import ReceiptScannerModal from './components/ReceiptScannerModal.tsx';
 
-    return transactions.map(tx => {
-        // Find the first matching rule
-        const matchingRule = rules.find(rule => tx.description.toLowerCase().includes(rule.keyword.toLowerCase()));
-        if (matchingRule) {
-            const updatedTx: Omit<Transaction, 'id'> = { ...tx, category: matchingRule.category };
-            if (tx.type === 'Debit') {
-                updatedTx.debitAccount = matchingRule.account;
-                updatedTx.creditAccount = 'Bank';
-            } else {
-                updatedTx.creditAccount = matchingRule.account;
-                updatedTx.debitAccount = 'Bank';
-            }
-            return updatedTx;
-        }
-        return tx;
-    });
-};
+// Views
+import DashboardView from './components/DashboardView.tsx';
+import JournalView from './components/JournalView.tsx';
+import ReportsView from './components/ReportsView.tsx';
+import VatReportView from './components/VatReportView.tsx';
+import TrialBalanceView from './components/TrialBalanceView.tsx';
+import ProfitAndLossView from './components/ProfitAndLossView.tsx';
+import AiChatView from './components/AiChatView.tsx';
+import SettingsView from './components/SettingsView.tsx';
+import FinancialStatementsView from './components/FinancialStatementsView.tsx';
+import CashFlowView from './components/CashFlowView.tsx';
+import HistoryView from './components/HistoryView.tsx';
+import InvoicesView from './components/InvoicesView.tsx';
+import PayrollView from './components/PayrollView.tsx';
+import CustomersView from './components/CustomersView.tsx';
+import LeadScraperView from './components/LeadScraperView.tsx';
+import CalendarView from './components/CalendarView.tsx';
+import AnalysisView from './components/AnalysisView.tsx';
+import TeamView from './components/TeamView.tsx';
+import RulesView from './components/RulesView.tsx';
+import PrivacyView from './components/PrivacyView.tsx';
+import TermsView from './components/TermsView.tsx';
+import SupportView from './components/SupportView.tsx';
 
+// Services & Utils
+import { 
+    getTransactions, addTransaction, updateTransaction, deleteTransactions, updateTransactions, bulkAddTransactions,
+    getRules, addRule, deleteRule,
+    getCustomers, addCustomer, updateCustomer, deleteCustomer,
+    getEmployees, addEmployee, updateEmployee, deleteEmployee,
+    getTasks, addTask, updateTask, deleteTask,
+    getTeamMembers, removeTeamMember, getCompanySettings, updateCompanySettings
+} from './services/apiService.ts';
+import { getUserFiles, deleteFileRecord, uploadFile } from './services/fileService.ts';
+import { analyzeStatement, generateFinancialAnalysis } from './services/geminiService.ts';
+import { generateProfitAndLoss, generateTrialBalance, generateBalanceSheet, generateCashFlowStatement } from './utils/accounting.ts';
 
 const App: React.FC = () => {
-    const { client: supabase, isLoading: isSupabaseLoading } = useSupabase();
-    const [session, setSession] = useState<Session | null>(null);
+    const { user, isLoading: authLoading } = useAuth();
     const [view, setView] = useState<View>(View.DASHBOARD);
+    const [isLoading, setIsLoading] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    
+    // Data States
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [rules, setRules] = useState<CategorizationRule[]>([]);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [loadingMessage, setLoadingMessage] = useState<string>('');
-    const [error, setError] = useState<string | null>(null);
-    const [analysisResult, setAnalysisResult] = useState<string>('');
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [tasks, setTaskData] = useState<Task[]>([]);
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+    const [files, setFiles] = useState<StoredFile[]>([]);
+    const [analysisData, setAnalysisData] = useState<FinancialAnalysis | null>(null);
+    const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
+    const [companySettings, setCompSettings] = useState<CompanySettings | null>(null);
     
+    // Analysis & Scanner State
+    const [pendingStatement, setPendingStatement] = useState<AnalyzedStatement | null>(null);
+    const [currentAnalysisFiles, setCurrentAnalysisFiles] = useState<File[]>([]);
+    const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
+
+    // Undo/Redo States
+    const [past, setPast] = useState<Transaction[][]>([]);
+    const [future, setFuture] = useState<Transaction[][]>([]);
+
+    const [showAmounts, setShowAmounts] = useState(true);
+    const [isAiChatOpen, setIsAiChatOpen] = useState(false);
+
+    // Initial Load
     useEffect(() => {
-        if (!supabase) {
-             setSession(null);
-             // Don't set loading to false here immediately, wait for the provider's loading state.
-             if (!isSupabaseLoading) {
-                 setIsLoading(false);
-             }
-             return;
+        if (user) {
+            loadData();
         }
+    }, [user?.id]);
 
-        const fetchInitialData = async (user_id: string) => {
-            setIsLoading(true);
-            setLoadingMessage("Loading your financial data...");
-            setError(null);
-            try {
-                const [transactionsData, rulesData] = await Promise.all([
-                    getTransactions(supabase, user_id),
-                    getRules(supabase, user_id)
-                ]);
-                setTransactions(transactionsData);
-                setRules(rulesData);
-                setView(View.DASHBOARD);
-            } catch (e: any) {
-                setError(`Failed to load data: ${e.message}. Check your database connection settings and ensure the schema is installed.`);
-            } finally {
-                setIsLoading(false);
-                setLoadingMessage('');
-            }
-        };
-
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            if (session) {
-                fetchInitialData(session.user.id);
-            } else {
-                setIsLoading(false);
-            }
-        });
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session);
-            if (session) {
-                fetchInitialData(session.user.id);
-            } else {
-                // Clear data on logout
-                setTransactions([]);
-                setRules([]);
-                setView(View.DASHBOARD);
-            }
-        });
-
-        return () => subscription.unsubscribe();
-    }, [supabase, isSupabaseLoading]);
-
-    const handleSaveSettings = (settings: Settings) => {
-        localStorage.setItem('gemini_api_key', settings.apiKey);
-        localStorage.setItem('supabase_url', settings.supabaseUrl);
-        localStorage.setItem('supabase_anon_key', settings.supabaseAnonKey);
-        alert("Settings saved successfully! The application will now reload to apply the new configuration.");
-        window.location.reload();
-    };
-
-
-    const checkApiKey = () => {
-        const key = localStorage.getItem('gemini_api_key');
-        if (!key) {
-            setError("Gemini API Key is not set. Please go to Settings to add your key.");
-            setView(View.SETTINGS);
-            return false;
-        }
-        return true;
-    };
-
-    const handleFileAnalysis = async (file: File) => {
-        if (!session || !checkApiKey() || !supabase) {
-            return;
-        }
-
+    const loadData = async () => {
+        if (!user) return;
+        
         setIsLoading(true);
-        setError(null);
-        setAnalysisResult('');
+        setLoadingMessage('Fetching your books...');
         
         try {
-            setLoadingMessage('Reading and analyzing your bank statement...');
-            const base64String = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve((reader.result as string).split(',')[1]);
-                reader.onerror = error => reject(error);
-            });
-
-            const analyzedTransactions = await analyzeStatement(base64String, file.type);
-            const transactionsWithRulesApplied = applyCategorizationRules(analyzedTransactions, rules);
+            const [txs, rls, custs, emps, tsks, history, team, settings] = await Promise.all([
+                getTransactions(user.id).catch(() => []),
+                getRules(user.id).catch(() => []),
+                getCustomers(user.id).catch(() => []),
+                getEmployees(user.id).catch(() => []),
+                getTasks(user.id).catch(() => []),
+                getUserFiles(user.id).catch(() => []),
+                getTeamMembers(user.id).catch(() => []),
+                getCompanySettings(user.id).catch(() => null)
+            ]);
             
-            setLoadingMessage('Saving new transactions to your database...');
-            await saveAllTransactions(supabase, session.user.id, transactionsWithRulesApplied);
-
-            // Fetch all transactions again to have a consolidated view
-            const allTransactions = await getTransactions(supabase, session.user.id);
-            setTransactions(allTransactions);
-
-            setLoadingMessage('Generating initial financial insights...');
-            const analysis = await generateFinancialAnalysis(allTransactions);
-            setAnalysisResult(analysis);
-            setView(View.ANALYSIS); // Show the analysis first
-        } catch (e: any) {
-            setError(`Failed to analyze statement: ${e.message}`);
+            setTransactions(txs || []);
+            setRules(rls || []);
+            setCustomers(custs || []);
+            setEmployees(emps || []);
+            setTaskData(tsks || []);
+            setFiles(history || []);
+            setTeamMembers(team || []);
+            setCompSettings(settings);
+            
+            setPast([]);
+            setFuture([]);
+            
+        } catch (error: any) {
+            console.error("[App] Load Data Error:", error);
         } finally {
             setIsLoading(false);
             setLoadingMessage('');
         }
     };
-    
-    const handleAddTransaction = async (transaction: Omit<Transaction, 'id'>) => {
-        if (!session || !supabase) return;
-        try {
-            const newTx = await addTransaction(supabase, session.user.id, transaction);
-            setTransactions(prev => [...prev, newTx]);
-        } catch (e: any)
-{
-            setError(`Failed to add transaction: ${e.message}`);
-        }
-    };
 
-    const handleUpdateTransaction = async (updatedTx: Transaction) => {
-        if (!session || !supabase) return;
+    // Mutation Handlers
+    const handleUpdateTransaction = async (t: Transaction) => {
+        if (!user) return;
+        recordAction();
         try {
-            const returnedTx = await updateTransaction(supabase, session.user.id, updatedTx);
-            setTransactions(prev => prev.map(tx => tx.id === returnedTx.id ? returnedTx : tx));
-        } catch(e: any) {
-            setError(`Failed to update transaction: ${e.message}`);
+            setTransactions(prev => prev.map(tx => tx.id === t.id ? t : tx));
+            await updateTransaction(user.id, t);
+        } catch (e) {
+            console.error("Update failed", e);
+            loadData();
         }
     };
 
     const handleBulkDelete = async (ids: string[]) => {
-        if (!session || !supabase) return;
+        if (!user) return;
+        recordAction();
         try {
-            await deleteTransactions(supabase, session.user.id, ids);
             setTransactions(prev => prev.filter(tx => !ids.includes(tx.id)));
-        } catch (e: any) {
-            setError(`Failed to delete transactions: ${e.message}`);
+            await deleteTransactions(user.id, ids);
+        } catch (e) {
+            console.error("Delete failed", e);
+            loadData();
         }
     };
 
-    const handleBulkUpdate = async (ids: string[], updateData: Partial<Omit<Transaction, 'id'>>) => {
-        if (!session || !supabase) return;
+    const handleBulkUpdate = async (ids: string[], data: Partial<Omit<Transaction, 'id'>>) => {
+        if (!user) return;
+        recordAction();
         try {
-            const updatedTxs = await updateTransactions(supabase, session.user.id, ids, updateData);
-            // Create a map for efficient updates
-            const updatedMap = new Map(updatedTxs.map(tx => [tx.id, tx]));
-            setTransactions(prev => prev.map(tx => updatedMap.get(tx.id) || tx));
-        } catch (e: any) {
-            setError(`Failed to update transactions: ${e.message}`);
+            setTransactions(prev => prev.map(tx => ids.includes(tx.id) ? { ...tx, ...data } : tx));
+            await updateTransactions(user.id, ids, data);
+        } catch (e) {
+            console.error("Bulk update failed", e);
+            loadData();
         }
     };
 
+    const handleAddTransaction = async (t: Omit<Transaction, 'id'>) => {
+        if (!user) return;
+        recordAction();
+        try {
+            const added = await addTransaction(user.id, t);
+            setTransactions(prev => [added, ...prev]);
+        } catch (e) {
+            console.error("Add failed", e);
+            loadData();
+        }
+    };
 
-    const handleSync = async () => {
-       if (!session || !supabase) return;
+    const recordAction = () => {
+        setPast(prev => [...prev.slice(-19), [...transactions]]);
+        setFuture([]);
+    };
+
+    const handleUndo = () => {
+        if (past.length === 0) return;
+        const previous = past[past.length - 1];
+        const newPast = past.slice(0, past.length - 1);
+        setFuture(prev => [[...transactions], ...prev]);
+        setTransactions(previous);
+        setPast(newPast);
+    };
+
+    const handleRedo = () => {
+        if (future.length === 0) return;
+        const next = future[0];
+        const newFuture = future.slice(1);
+        setPast(prev => [...prev, [...transactions]]);
+        setTransactions(next);
+        setFuture(newFuture);
+    };
+
+    const handleFileAnalysis = async (selectedFiles: File[]) => {
+        if (!user) return;
+        if (selectedFiles.length === 0) return;
+        
         setIsLoading(true);
-        setLoadingMessage("Syncing with database...");
+        setCurrentAnalysisFiles(selectedFiles);
         try {
-            // This function is intended for new transactions, let's reconsider its use or name.
-            // For now, it will fail if transactions have IDs. Let's make it a no-op if there's nothing new.
-            // A better sync would diff local and remote state.
-            // For now, let's assume the user wants to save any unsaved data they might have,
-            // but the current implementation saves ALL transactions, causing PK conflicts.
-            // A simple fix is to filter out existing transactions, but that's complex.
-            // The button is "Save All", let's make it do nothing for now to prevent errors.
-            // A proper implementation would require more logic.
-            // Let's assume the button's intent is no longer relevant as saves are immediate.
-            alert('Your data is automatically saved. Manual sync is not required.');
-            // await saveAllTransactions(supabase, session.user.id, transactions);
-            // alert('Transactions synced with the database!');
-        } catch(e: any) {
-            setError(`Failed to sync: ${e.message}`);
+            const aggregatedTransactions: Omit<Transaction, 'id'>[] = [];
+            const bankNames = new Set<string>();
+            let minStartDate: string = "";
+            let maxEndDate: string = "";
+
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                setLoadingMessage(`AI Analysis (${i + 1}/${selectedFiles.length}): ${file.name}...`);
+                
+                let attempts = 0;
+                let success = false;
+                let result: AnalyzedStatement | null = null;
+
+                while (attempts < 2 && !success) {
+                    try {
+                        const base64 = await new Promise<string>((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+                            reader.onerror = () => reject(new Error("File read failed"));
+                            reader.readAsDataURL(file);
+                        });
+                        
+                        result = await analyzeStatement(base64, file.type);
+                        success = true;
+                    } catch (fileError: any) {
+                        attempts++;
+                        console.error(`[App] Attempt ${attempts} failed for ${file.name}:`, fileError);
+                        
+                        if (attempts >= 2) {
+                            let msg = fileError.message || "Unknown OCR error.";
+                            if (msg.includes("500") || msg.includes("xhr")) {
+                                msg = "Google AI service is currently busy or the file payload is too large. Try uploading 1 month at a time.";
+                            }
+                            alert(`Could not process ${file.name}: ${msg}`);
+                        } else {
+                            setLoadingMessage(`Retrying ${file.name}...`);
+                            await new Promise(r => setTimeout(r, 2000)); // Wait before retry
+                        }
+                    }
+                }
+
+                if (success && result && result.transactions && result.transactions.length > 0) {
+                    aggregatedTransactions.push(...result.transactions);
+                    if (result.metadata?.bankName) bankNames.add(result.metadata.bankName);
+                    if (result.metadata?.startDate && (!minStartDate || result.metadata.startDate < minStartDate)) {
+                        minStartDate = result.metadata.startDate;
+                    }
+                    if (result.metadata?.endDate && (!maxEndDate || result.metadata.endDate > maxEndDate)) {
+                        maxEndDate = result.metadata.endDate;
+                    }
+                }
+            }
+            
+            if (aggregatedTransactions.length === 0) {
+                throw new Error("No data could be extracted from any of the uploaded documents. Ensure they are clear PDF bank statements (not password protected).");
+            }
+
+            // Sort by date before presenting to user
+            aggregatedTransactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+            setPendingStatement({
+                metadata: {
+                    bankName: Array.from(bankNames).join(', ') || 'Various Banks',
+                    startDate: minStartDate,
+                    endDate: maxEndDate,
+                    currency: 'ZAR'
+                },
+                transactions: aggregatedTransactions
+            });
+        } catch (e: any) {
+            console.error("[App] Analysis Fatal Error:", e);
+            alert(`Import Failed: ${e.message}`);
         } finally {
             setIsLoading(false);
             setLoadingMessage('');
         }
     };
 
-    const handleAddRule = async (rule: Omit<CategorizationRule, 'id'>) => {
-        if (!session || !supabase) return;
-        try {
-            const newRule = await addRule(supabase, session.user.id, rule);
-            setRules(prev => [...prev, newRule]);
-        } catch (e: any) {
-            setError(`Failed to add rule: ${e.message}`);
-        }
-    };
-
-    const handleDeleteRule = async (id: string) => {
-        if (!session || !supabase) return;
-        try {
-            await deleteRule(supabase, session.user.id, id);
-            setRules(prev => prev.filter(rule => rule.id !== id));
-        } catch (e: any) {
-            setError(`Failed to delete rule: ${e.message}`);
-        }
-    };
-    
-    const trialBalanceData: TrialBalance = useMemo(() => transactions.length > 0 ? generateTrialBalance(transactions) : { balances: [], totals: { debit: 0, credit: 0 } }, [transactions]);
-    const pnlData: PnlData = useMemo(() => transactions.length > 0 ? generateProfitAndLoss(transactions) : { revenues: {}, expenses: {}, totalRevenue: 0, totalExpenses: 0, netProfit: 0 }, [transactions]);
-    const balanceSheetData: BalanceSheetData = useMemo(() => transactions.length > 0 ? generateBalanceSheet(transactions, pnlData.netProfit) : { assets: {}, liabilities: {}, equity: {}, totals: { assets: 0, liabilitiesAndEquity: 0 } }, [transactions, pnlData.netProfit]);
-    const cashFlowData: CashFlowData = useMemo(() => transactions.length > 0 ? generateCashFlowStatement(transactions, trialBalanceData) : { operatingActivities: {}, investingActivities: {}, financingActivities: {}, totalOperating: 0, totalInvesting: 0, totalFinancing: 0, netCashFlow: 0, startingBankBalance: 0, endingBankBalance: 0 }, [transactions, trialBalanceData]);
-
-
-    const renderAppContent = () => {
-        switch (view) {
-            case View.JOURNAL:
-                return <JournalView 
-                    transactions={transactions} 
-                    onUpdateTransaction={handleUpdateTransaction} 
-                    onAddTransaction={handleAddTransaction}
-                    onBulkDelete={handleBulkDelete}
-                    onBulkUpdate={handleBulkUpdate}
-                />;
-            case View.TRIAL_BALANCE:
-                return <TrialBalanceView data={trialBalanceData} />;
-            case View.PROFIT_LOSS:
-                return <ProfitAndLossView data={pnlData} />;
-            case View.STATEMENTS:
-                 return <FinancialStatementsView pnlData={pnlData} balanceSheetData={balanceSheetData} />;
-            case View.CASH_FLOW:
-                 return <CashFlowView data={cashFlowData} />;
-            case View.ANALYSIS:
-                return <AnalysisView transactions={transactions} initialAnalysis={analysisResult} checkApiKey={checkApiKey} />;
-            case View.RULES:
-                return <RulesView rules={rules} onAddRule={handleAddRule} onDeleteRule={handleDeleteRule} />;
-            case View.AI_CHAT:
-                return <AiChatView transactions={transactions} checkApiKey={checkApiKey} />;
-             case View.SETTINGS:
-                const currentApiKey = localStorage.getItem('gemini_api_key') || '';
-                const currentSupabaseUrl = localStorage.getItem('supabase_url') || '';
-                const currentSupabaseAnonKey = localStorage.getItem('supabase_anon_key') || '';
-                return <SettingsView 
-                    currentApiKey={currentApiKey}
-                    currentSupabaseUrl={currentSupabaseUrl}
-                    currentSupabaseAnonKey={currentSupabaseAnonKey}
-                    onSaveSettings={handleSaveSettings} 
-                />;
-            case View.DASHBOARD:
-            default:
-                return <DashboardView 
-                    onFileAnalysis={handleFileAnalysis}
-                    transactions={transactions}
-                    pnlData={pnlData}
-                    balanceSheetData={balanceSheetData}
-                />;
-        }
-    };
-
-    const renderMainLayout = () => {
-        if (isLoading) {
-            return (
-                <div className="flex flex-col items-center justify-center h-screen">
-                    <Spinner />
-                    <p className="mt-4 text-teal-500 dark:text-teal-400">{loadingMessage || 'Loading...'}</p>
-                </div>
-            );
-        }
+    const confirmPendingStatement = async () => {
+        if (!user || !pendingStatement || currentAnalysisFiles.length === 0) return;
         
-        return (
-            <>
-                <div className="space-y-6">
-                    <Navigation activeView={view} setView={setView} />
-                    {error && (
-                        <div className="bg-red-100 dark:bg-red-900/50 border border-red-400 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg relative flex items-start gap-3" role="alert">
-                            <div className="py-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            </div>
-                            <div>
-                                <strong className="font-bold">Error: </strong>
-                                <span className="block sm:inline">{error}</span>
-                            </div>
-                            <button onClick={() => setError(null)} className="absolute top-0 bottom-0 right-0 px-4 py-3" aria-label="Close">
-                                <XIcon className="w-5 h-5" />
-                            </button>
-                        </div>
-                     )}
-                    <ActionToolbar
-                        activeView={view}
-                        transactions={transactions}
-                        rules={rules}
-                        onSync={handleSync}
-                        pnlData={pnlData}
-                        balanceSheetData={balanceSheetData}
-                        trialBalanceData={trialBalanceData}
-                        cashFlowData={cashFlowData}
-                    />
-                    <div>
-                        {renderAppContent()}
-                    </div>
-                </div>
-                <AiAssistantButton onClick={() => setView(View.AI_CHAT)} />
-            </>
-        )
-    }
+        setIsLoading(true);
+        setLoadingMessage('Importing into journal...');
+        try {
+            const txs = pendingStatement.transactions;
+            await bulkAddTransactions(user.id, txs as Omit<Transaction, 'id'>[]);
+            
+            for (const file of currentAnalysisFiles) {
+                await uploadFile(user.id, file, 0, pendingStatement.metadata?.bankName || 'OCR Import');
+            }
+            
+            await loadData();
+            setPendingStatement(null);
+            setCurrentAnalysisFiles([]);
+            setView(View.JOURNAL);
+        } catch (e: any) {
+            alert(`Import failed: ${e.message}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-    if (isSupabaseLoading) {
-         return (
-            <div className="flex flex-col items-center justify-center h-screen">
-                <Spinner />
-                <p className="mt-4 text-teal-500 dark:text-teal-400">Connecting to database...</p>
+    const handleReceiptConfirmed = async (receipt: AnalyzedReceipt) => {
+        if (!user) return;
+        setIsLoading(true);
+        setLoadingMessage('Recording receipt...');
+        try {
+            const newTx: Omit<Transaction, 'id'> = {
+                date: receipt.date,
+                description: `[Scanner] ${receipt.merchant}`,
+                amount: receipt.totalAmount,
+                type: 'Debit',
+                debitAccount: receipt.debitAccount,
+                creditAccount: receipt.creditAccount,
+                category: receipt.suggestedCategory,
+                taxCategory: receipt.suggestedTaxCategory,
+            };
+            await addTransaction(user.id, newTx);
+            await loadData();
+            setIsReceiptScannerOpen(false);
+            setView(View.JOURNAL);
+        } catch (e: any) {
+            alert("Failed to save receipt: " + e.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleGenerateAnalysis = async () => {
+        if (transactions.length === 0) return;
+        setIsAnalysisLoading(true);
+        try {
+            const result = await generateFinancialAnalysis(transactions);
+            setAnalysisData(result);
+        } catch (e: any) {
+            console.error("Analysis failed", e);
+        } finally {
+            setIsAnalysisLoading(false);
+        }
+    };
+
+    // Derived Data
+    const filteredTransactions = useMemo(() => {
+        if (!searchQuery.trim()) return transactions;
+        const lowerQ = searchQuery.toLowerCase();
+        return transactions.filter(t => 
+            t.description.toLowerCase().includes(lowerQ) || 
+            t.debitAccount.toLowerCase().includes(lowerQ) ||
+            t.creditAccount.toLowerCase().includes(lowerQ)
+        );
+    }, [transactions, searchQuery]);
+
+    const pnlData = useMemo(() => generateProfitAndLoss(filteredTransactions), [filteredTransactions]);
+    const trialBalanceData = useMemo(() => generateTrialBalance(filteredTransactions), [filteredTransactions]);
+    const balanceSheetData = useMemo(() => generateBalanceSheet(filteredTransactions, pnlData.netProfit), [filteredTransactions, pnlData]);
+    const cashFlowData = useMemo(() => generateCashFlowStatement(filteredTransactions, trialBalanceData), [filteredTransactions, trialBalanceData]);
+    const knownAccounts = useMemo(() => Array.from(new Set(transactions.map(t => t.debitAccount))), [transactions]);
+
+    if (authLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
+                <LoadingOverlay isActive={true} message="Initializing session..." />
             </div>
         );
     }
 
-    if (!supabase) {
-        const storedApiKey = localStorage.getItem('gemini_api_key') || '';
-        const storedSupabaseUrl = localStorage.getItem('supabase_url') || '';
-        const storedSupabaseAnonKey = localStorage.getItem('supabase_anon_key') || '';
-        
-        return (
-            <div className="min-h-screen font-sans">
-                <Header session={null} />
-                <main className="container mx-auto p-4 sm:p-6 lg:p-8">
-                     <SettingsView 
-                         currentApiKey={storedApiKey}
-                         currentSupabaseUrl={storedSupabaseUrl}
-                         currentSupabaseAnonKey={storedSupabaseAnonKey}
-                         onSaveSettings={handleSaveSettings}
-                         isInitialSetup={true}
-                    />
-                </main>
-            </div>
-        )
+    if (!user) {
+        return <AuthView />;
     }
 
     return (
-        <div className="min-h-screen font-sans">
-            <Header session={session}/>
-            <main className="container mx-auto p-4 sm:p-6 lg:p-8">
-                {!session ? <AuthView /> : renderMainLayout()}
+        <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+            <Header onSearch={setSearchQuery} searchQuery={searchQuery} companyName={companySettings?.companyName} logoUrl={companySettings?.logoUrl} />
+            <main className="flex-grow container mx-auto px-4 py-8 space-y-6">
+                <Navigation activeView={view} setView={setView} />
+                
+                {view === View.DASHBOARD && <DashboardView onFileAnalysis={handleFileAnalysis} transactions={filteredTransactions} pnlData={pnlData} showAmounts={showAmounts} onLaunchScanner={() => setIsReceiptScannerOpen(true)} />}
+                {view === View.JOURNAL && <JournalView transactions={filteredTransactions} onAddTransaction={handleAddTransaction} onUpdateTransaction={handleUpdateTransaction} onBulkDelete={handleBulkDelete} onBulkUpdate={handleBulkUpdate} knownAccounts={knownAccounts} onRefreshData={loadData} onUndo={handleUndo} onRedo={handleRedo} canUndo={past.length > 0} canRedo={future.length > 0} allTransactionsCount={transactions.length} onClearFilters={() => setSearchQuery('')} />}
+                {view === View.VAT_201 && <VatReportView transactions={filteredTransactions} />}
+                {view === View.TRIAL_BALANCE && <TrialBalanceView data={trialBalanceData} showAmounts={showAmounts} />}
+                {view === View.PROFIT_LOSS && <ProfitAndLossView data={pnlData} showAmounts={showAmounts} />}
+                {view === View.CASH_FLOW && <CashFlowView data={cashFlowData} showAmounts={showAmounts} />}
+                {view === View.STATEMENTS && <FinancialStatementsView pnlData={pnlData} balanceSheetData={balanceSheetData} showAmounts={showAmounts} />}
+                {view === View.HISTORY && <HistoryView files={files} onDeleteFile={(f) => deleteFileRecord(user!.id, f).then(() => loadData())} onRefresh={loadData} />}
+                {view === View.INVOICES && <InvoicesView customers={customers} />}
+                {view === View.PAYROLL && <PayrollView employees={employees} onAddEmployee={(e) => addEmployee(user!.id, e).then(() => loadData())} onUpdateEmployee={(e) => updateEmployee(user!.id, e).then(() => loadData())} onDeleteEmployee={(id) => deleteEmployee(user!.id, id).then(() => loadData())} />}
+                {view === View.CUSTOMERS && <CustomersView customers={customers} onAddCustomer={(c) => addCustomer(user!.id, c).then(() => loadData())} onUpdateCustomer={(c) => updateCustomer(user!.id, c).then(() => loadData())} onDeleteCustomer={(id) => deleteCustomer(user!.id, id).then(() => loadData())} />}
+                {view === View.LEAD_SCRAPER && <LeadScraperView onAddCustomer={(c) => addCustomer(user!.id, c).then(() => loadData())} />}
+                {view === View.CALENDAR && <CalendarView tasks={tasks} onAddTask={(t) => addTask(user!.id, t).then(() => loadData())} onUpdateTask={(t) => updateTask(user!.id, t).then(() => loadData())} onDeleteTask={(id) => deleteTask(user!.id, id).then(() => loadData())} />}
+                {view === View.ANALYSIS && <AnalysisView analysisData={analysisData} isLoading={isAnalysisLoading} error={null} onGenerateAnalysis={handleGenerateAnalysis} transactions={filteredTransactions} />}
+                {view === View.REPORTS && <ReportsView transactions={filteredTransactions} pnlData={pnlData} balanceSheetData={balanceSheetData} trialBalanceData={trialBalanceData} cashFlowData={cashFlowData} analysisData={analysisData} onGenerateAnalysis={handleGenerateAnalysis} isAnalysisLoading={isAnalysisLoading} />}
+                {view === View.TEAM && <TeamView members={teamMembers} onInvite={(email, role, name) => Promise.resolve()} onRemove={(id) => removeTeamMember(user!.id, id).then(() => loadData())} />}
+                {view === View.RULES && <RulesView rules={rules} onAddRule={(r) => addRule(user!.id, r).then(() => loadData())} onDeleteRule={(id) => deleteRule(user!.id, id).then(() => loadData())} knownAccounts={knownAccounts} />}
+                {view === View.SETTINGS && <SettingsView companySettings={companySettings} onUpdateSettings={(s) => { setCompSettings(s); updateCompanySettings(user.id, s); }} />}
+                {view === View.PRIVACY && <PrivacyView />}
+                {view === View.TERMS && <TermsView />}
+                {view === View.SUPPORT && <SupportView />}
+                {view === View.AI_CHAT && <AiChatView transactions={transactions} onClose={() => setView(View.DASHBOARD)} checkApiKey={() => !!(process.env.GEMINI_API_KEY || process.env.API_KEY)} />}
+
             </main>
+            <Footer setView={setView} />
+            <LoadingOverlay isActive={isLoading} message={loadingMessage} />
+            <AiAssistantButton onClick={() => setIsAiChatOpen(true)} />
+            
+            {isAiChatOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-end p-4 bg-black/40 backdrop-blur-sm">
+                    <div className="w-full max-w-lg h-[90vh]">
+                        <AiChatView transactions={transactions} checkApiKey={() => !!(process.env.GEMINI_API_KEY || process.env.API_KEY)} onClose={() => setIsAiChatOpen(false)} onBulkUpdate={handleBulkUpdate} />
+                    </div>
+                </div>
+            )}
+
+            {pendingStatement && (
+                <StatementPreviewModal 
+                    isOpen={!!pendingStatement} 
+                    metadata={pendingStatement.metadata} 
+                    transactions={pendingStatement.transactions} 
+                    onConfirm={confirmPendingStatement} 
+                    onCancel={() => { setPendingStatement(null); setCurrentAnalysisFiles([]); }} 
+                />
+            )}
+
+            {isReceiptScannerOpen && (
+                <ReceiptScannerModal 
+                    isOpen={isReceiptScannerOpen} 
+                    onClose={() => setIsReceiptScannerOpen(false)} 
+                    onConfirm={handleReceiptConfirmed} 
+                />
+            )}
         </div>
     );
 };

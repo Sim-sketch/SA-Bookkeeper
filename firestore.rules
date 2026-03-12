@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users/{userId}/transactions
+    // Fields: id, date, description, amount, category, type, status, reference, taxCategory, vatAmount, netAmount
+    //
+    // Collection: users/{userId}/rules
+    // Fields: id, pattern, category, taxCategory
+    //
+    // Collection: users/{userId}/customers
+    // Fields: id, name, email, phone, address, vatNumber, status
+    //
+    // Collection: users/{userId}/employees
+    // Fields: id, name, email, position, salary, idNumber, taxNumber, createdAt, updatedAt
+    //
+    // Collection: users/{userId}/settings
+    // Document: company
+    // Fields: companyName, invoiceCounter, invoicePrefix, quoteCounter, quotePrefix, poCounter, poPrefix
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidString(val, min, max) {
+      return val is string && val.size() >= min && val.size() <= max;
+    }
+
+    function isValidNumber(val, min, max) {
+      return val is number && val >= min && val <= max;
+    }
+
+    function hasOnlyAllowedFields(allowedFields) {
+      return request.resource.data.keys().hasOnly(allowedFields);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /{allSubcollections=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    match /test/connection {
+      allow read: if isAuthenticated();
+    }
+  }
+}

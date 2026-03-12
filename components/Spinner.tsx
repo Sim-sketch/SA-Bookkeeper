@@ -1,14 +1,13 @@
 
 import React from 'react';
 
-const Spinner: React.FC = () => {
+const Spinner: React.FC<{ className?: string }> = ({ className }) => {
     return (
-        <div
-            className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] text-teal-400 motion-reduce:animate-[spin_1.5s_linear_infinite]"
-            role="status">
-            <span
-                className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]"
-            >Loading...</span>
+        <div className={`flex space-x-2 justify-center items-center ${className}`}>
+            <span className="sr-only">Loading...</span>
+            <div className="h-2 w-2 bg-teal-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+            <div className="h-2 w-2 bg-teal-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+            <div className="h-2 w-2 bg-teal-400 rounded-full animate-bounce"></div>
         </div>
     );
 };

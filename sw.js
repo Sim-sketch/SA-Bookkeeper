@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sa-bookkeeper-ai-v1';
+const CACHE_NAME = 'sa-bookkeeper-ai-v4';
 const URLS_TO_CACHE = [
   '/',
   '/index.html',

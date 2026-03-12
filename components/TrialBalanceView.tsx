@@ -1,16 +1,25 @@
 import React from 'react';
-import { TrialBalance } from '../types';
+import { TrialBalance } from '../types.ts';
 
 interface TrialBalanceViewProps {
     data: TrialBalance;
+    showAmounts?: boolean;
 }
 
-const TrialBalanceView: React.FC<TrialBalanceViewProps> = ({ data }) => {
+const TrialBalanceView: React.FC<TrialBalanceViewProps> = ({ data, showAmounts = true }) => {
     const { balances, totals } = data;
     const totalsMatch = totals.debit.toFixed(2) === totals.credit.toFixed(2);
 
+    const formatAmount = (amount: number) => {
+        return showAmounts ? (amount > 0 ? amount.toFixed(2) : '-') : (amount > 0 ? '****' : '-');
+    };
+
+    const formatTotal = (amount: number) => {
+        return showAmounts ? amount.toFixed(2) : '****';
+    };
+
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden hover:shadow-xl transition-all duration-300">
             <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800">
                 <h2 className="text-xl font-bold text-teal-600 dark:text-teal-300">Trial Balance</h2>
             </div>
@@ -28,10 +37,10 @@ const TrialBalanceView: React.FC<TrialBalanceViewProps> = ({ data }) => {
                             <tr key={index} className="hover:bg-slate-100/50 dark:hover:bg-slate-800/40">
                                 <td className="px-6 py-4 font-medium whitespace-nowrap">{balance.account}</td>
                                 <td className="px-6 py-4 text-right font-mono">
-                                    {balance.debit > 0 ? balance.debit.toFixed(2) : '-'}
+                                    {formatAmount(balance.debit)}
                                 </td>
                                 <td className="px-6 py-4 text-right font-mono">
-                                    {balance.credit > 0 ? balance.credit.toFixed(2) : '-'}
+                                    {formatAmount(balance.credit)}
                                 </td>
                             </tr>
                         ))}
@@ -39,8 +48,8 @@ const TrialBalanceView: React.FC<TrialBalanceViewProps> = ({ data }) => {
                     <tfoot>
                         <tr className={`font-bold bg-slate-50 dark:bg-slate-800/50 ${totalsMatch ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                             <td className="px-6 py-4 text-lg whitespace-nowrap">Total</td>
-                            <td className="px-6 py-4 text-right text-lg font-mono">{totals.debit.toFixed(2)}</td>
-                            <td className="px-6 py-4 text-right text-lg font-mono">{totals.credit.toFixed(2)}</td>
+                            <td className="px-6 py-4 text-right text-lg font-mono">{formatTotal(totals.debit)}</td>
+                            <td className="px-6 py-4 text-right text-lg font-mono">{formatTotal(totals.credit)}</td>
                         </tr>
                     </tfoot>
                 </table>

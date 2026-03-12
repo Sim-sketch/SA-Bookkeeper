@@ -1,80 +1,321 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Transaction } from '../types';
-import { generateFinancialAnalysis } from '../services/geminiService';
+
+import React, { useMemo } from 'react';
+import { Transaction, FinancialAnalysis } from '../types';
+import { exportAnalysisAsPDF } from '../utils/pdf';
 import Spinner from './Spinner';
 import { AnalysisIcon } from './icons/AnalysisIcon';
+import { PdfIcon } from './icons/PdfIcon';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { TrendingUpIcon } from './icons/TrendingUpIcon';
+import { ExpenseIcon } from './icons/ExpenseIcon';
+import { ShieldCheckIcon } from './icons/ShieldCheckIcon';
+import { ChartIcon } from './icons/ChartIcon';
 
 interface AnalysisViewProps {
-    transactions: Transaction[];
-    initialAnalysis: string;
-    checkApiKey: () => boolean;
+    analysisData: FinancialAnalysis | null;
+    isLoading: boolean;
+    onGenerateAnalysis: () => void;
+    error: string | null;
+    transactions?: Transaction[];
 }
 
-const AnalysisView: React.FC<AnalysisViewProps> = ({ transactions, initialAnalysis, checkApiKey }) => {
-    const [analysis, setAnalysis] = useState<string>(initialAnalysis);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
+const AnalysisView: React.FC<AnalysisViewProps> = ({ analysisData, isLoading, onGenerateAnalysis, error, transactions }) => {
+    const { theme } = useTheme();
+    const { user } = useAuth();
 
-    useEffect(() => {
-        setAnalysis(initialAnalysis);
-    }, [initialAnalysis]);
+    // Chart Colors
+    const COLORS = ['#f97316', '#eab308', '#3b82f6', '#a855f7', '#ec4899'];
 
-    const handleGenerateAnalysis = useCallback(async () => {
-        if (!checkApiKey()) {
-            return;
+    const period = useMemo(() => {
+        if (!transactions || transactions.length === 0) return "";
+        const timestamps = transactions.map(t => new Date(t.date).getTime());
+        const min = new Date(Math.min(...timestamps));
+        const max = new Date(Math.max(...timestamps));
+        const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+        return `${min.toLocaleDateString('en-ZA', options)} - ${max.toLocaleDateString('en-ZA', options)}`;
+    }, [transactions]);
+
+    const handleDownloadPDF = () => {
+        if (analysisData) {
+            exportAnalysisAsPDF(analysisData, user, period);
         }
-        setIsLoading(true);
-        setError(null);
-        setAnalysis('');
-        try {
-            const result = await generateFinancialAnalysis(transactions);
-            setAnalysis(result);
-        } catch (e: any) {
-            setError(e.message);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [transactions, checkApiKey]);
+    };
+
+    const renderEmptyState = () => (
+        <div className="text-center py-16 text-slate-500 dark:text-slate-400">
+            <div className="bg-teal-50 dark:bg-teal-900/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AnalysisIcon className="w-10 h-10 text-teal-600 dark:text-teal-400" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Ready to Analyze</h3>
+            <p className="max-w-md mx-auto mb-8">
+                Click the button below to generate a comprehensive financial health report using AI, including spending breakdowns and actionable tips.
+            </p>
+            <button
+                onClick={onGenerateAnalysis}
+                disabled={isLoading}
+                className="inline-flex justify-center items-center gap-2 rounded-full bg-teal-600 px-8 py-3 text-base font-bold text-white shadow-lg hover:bg-teal-500 hover:shadow-xl transition-all transform hover:-translate-y-1"
+            >
+                <AnalysisIcon className="w-5 h-5" />
+                {isLoading ? 'Analyzing Data...' : 'Generate Analysis Report'}
+            </button>
+        </div>
+    );
+
+    const renderAnalysis = (data: FinancialAnalysis) => {
+        const chartData = data.spendingBreakdown.map(item => ({
+            name: item.category,
+            value: item.amount
+        }));
+
+        return (
+            <div className="space-y-8 animate-fade-in">
+                {/* Disclaimer Banner */}
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg p-4 flex items-start gap-3">
+                    <span className="text-amber-600 dark:text-amber-400 text-xl mt-0.5">⚠️</span>
+                    <div>
+                        <p className="text-sm font-bold text-amber-800 dark:text-amber-300">AI-Generated Financial Report</p>
+                        <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                            This analysis is generated by an AI model and is for informational purposes only. 
+                            It does <strong>not</strong> constitute registered financial advice. 
+                            Please review all metrics with a qualified accountant before making business decisions or submitting to SARS.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Header & Summary */}
+                <div className="flex flex-col md:flex-row justify-between items-start gap-6">
+                    <div className="flex-1">
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Executive Summary</h2>
+                        {period && <p className="text-sm font-medium text-teal-600 dark:text-teal-400 mb-3">{period}</p>}
+                        <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-lg">
+                            {data.executiveSummary}
+                        </p>
+                    </div>
+                    <div className="flex gap-3 flex-shrink-0">
+                        <button
+                            onClick={handleDownloadPDF}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm font-medium"
+                        >
+                            <PdfIcon className="w-5 h-5 text-red-500" />
+                            Download PDF
+                        </button>
+                         <button
+                            onClick={onGenerateAnalysis}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-500 transition-colors shadow-sm font-medium"
+                        >
+                            Refresh Analysis
+                        </button>
+                    </div>
+                </div>
+
+                {/* Key Metrics Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-green-50 dark:bg-green-900/20 p-5 rounded-xl border border-green-100 dark:border-green-900/50">
+                        <p className="text-sm text-green-600 dark:text-green-400 font-semibold uppercase tracking-wider mb-1">Total Revenue</p>
+                        <p className="text-3xl font-bold text-slate-900 dark:text-white">R {data.keyMetrics.totalRevenue.toLocaleString()}</p>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/20 p-5 rounded-xl border border-red-100 dark:border-red-900/50">
+                        <p className="text-sm text-red-600 dark:text-red-400 font-semibold uppercase tracking-wider mb-1">Total Expenses</p>
+                        <p className="text-3xl font-bold text-slate-900 dark:text-white">R {data.keyMetrics.totalExpenses.toLocaleString()}</p>
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-xl border border-blue-100 dark:border-blue-900/50">
+                        <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider mb-1">Net Profit</p>
+                        <p className="text-3xl font-bold text-slate-900 dark:text-white">R {data.keyMetrics.netProfit.toLocaleString()}</p>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-900/20 p-5 rounded-xl border border-purple-100 dark:border-purple-900/50">
+                        <p className="text-sm text-purple-600 dark:text-purple-400 font-semibold uppercase tracking-wider mb-1">Profit Margin</p>
+                        <p className="text-3xl font-bold text-slate-900 dark:text-white">{data.keyMetrics.profitMargin.toFixed(1)}%</p>
+                    </div>
+                </div>
+
+                {/* Risks & Benchmarks */}
+                {(data.riskAssessment || data.industryBenchmarks) && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {data.riskAssessment && (
+                            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                                    <ShieldCheckIcon className="w-5 h-5 text-red-500" />
+                                    Risk Assessment
+                                </h3>
+                                <div className="space-y-4">
+                                    {data.riskAssessment.map((risk, idx) => (
+                                        <div key={idx} className="border-l-4 border-l-amber-400 pl-3">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="font-semibold text-slate-900 dark:text-white text-sm">{risk.risk}</span>
+                                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                                                    risk.severity === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                                    risk.severity === 'Medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                }`}>{risk.severity}</span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                                                Mitigation: {risk.mitigation}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {data.industryBenchmarks && (
+                            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                                    <ChartIcon className="w-5 h-5 text-blue-500" />
+                                    Industry Benchmarks
+                                </h3>
+                                <div className="space-y-4">
+                                    {data.industryBenchmarks.map((item, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                                            <div>
+                                                <p className="text-sm font-medium text-slate-900 dark:text-white">{item.metric}</p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">Target: {item.benchmark}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{item.yourValue}</p>
+                                                <span className={`text-xs font-bold ${
+                                                    item.status === 'Above' ? 'text-green-600 dark:text-green-400' :
+                                                    item.status === 'On Track' ? 'text-blue-600 dark:text-blue-400' :
+                                                    'text-amber-600 dark:text-amber-400'
+                                                }`}>
+                                                    {item.status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Spending Breakdown Chart */}
+                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-200 dark:border-slate-800">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                             <ExpenseIcon className="w-5 h-5 text-orange-500" />
+                             Top Spending Categories
+                        </h3>
+                        <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={chartData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {chartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip 
+                                        formatter={(value: number) => `R ${value.toLocaleString()}`}
+                                        contentStyle={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#fff', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    />
+                                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="mt-4 space-y-3">
+                             {data.spendingBreakdown.map((item, idx) => (
+                                 <div key={idx} className="flex justify-between items-center text-sm">
+                                     <div className="flex items-center gap-2">
+                                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
+                                         <span className="text-slate-700 dark:text-slate-300">{item.category}</span>
+                                     </div>
+                                     <div className="font-mono font-medium text-slate-900 dark:text-white">
+                                         R {item.amount.toLocaleString()} <span className="text-slate-400 text-xs ml-1">({item.percentage}%)</span>
+                                     </div>
+                                 </div>
+                             ))}
+                        </div>
+                    </div>
+
+                    {/* Right Column: Insights & Future */}
+                    <div className="space-y-6">
+                        {/* Future Outlook */}
+                        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-5 rounded-xl border border-indigo-100 dark:border-indigo-900/50 shadow-sm">
+                            <h3 className="text-lg font-bold text-indigo-800 dark:text-indigo-300 mb-2 flex items-center gap-2">
+                                <AnalysisIcon className="w-5 h-5" />
+                                Future Outlook
+                            </h3>
+                            <p className="text-sm text-indigo-900 dark:text-indigo-200 leading-relaxed">
+                                {data.futureOutlook}
+                            </p>
+                        </div>
+
+                        {/* Actionable Tips */}
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
+                                <TrendingUpIcon className="w-5 h-5 text-teal-500" />
+                                Actionable Insights
+                            </h3>
+                            
+                            <div className="space-y-3">
+                                {data.actionableTips.map((tip, idx) => (
+                                    <div key={idx} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h4 className="font-bold text-slate-900 dark:text-white">{tip.title}</h4>
+                                            <span className={`text-xs font-bold px-2 py-1 rounded-full 
+                                                ${tip.type === 'Savings' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 
+                                                tip.type === 'Growth' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 
+                                                'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                                                {tip.type}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                                            {tip.description}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30 mt-4">
+                            <h4 className="font-bold text-amber-800 dark:text-amber-400 text-sm mb-1">Tax Considerations</h4>
+                            <p className="text-xs text-amber-700 dark:text-amber-500 leading-relaxed">
+                                {data.taxImplications}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-                <h2 className="text-xl font-bold text-teal-600 dark:text-teal-300 mb-2 md:mb-0">AI Financial Analysis & Advice</h2>
-                <button
-                    onClick={handleGenerateAnalysis}
-                    disabled={isLoading}
-                    className="inline-flex justify-center items-center gap-2 rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                    <AnalysisIcon className="w-4 h-4" />
-                    {isLoading ? 'Generating...' : (analysis ? 'Regenerate Analysis' : 'Generate Analysis')}
-                </button>
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 sm:p-8 min-h-[600px]">
+            <div className="flex flex-col h-full">
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center h-96">
+                        <Spinner />
+                        <p className="mt-6 text-lg font-medium text-teal-600 dark:text-teal-400 animate-pulse">
+                            Analyzing your finances with AI...
+                        </p>
+                        <p className="text-slate-400 text-sm mt-2">Identifying trends, savings, and tax insights.</p>
+                    </div>
+                ) : error ? (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center my-auto">
+                        <p className="text-red-600 dark:text-red-400 font-bold mb-2">Analysis Failed</p>
+                        <p className="text-slate-600 dark:text-slate-300 text-sm mb-4">{error}</p>
+                        <button 
+                            onClick={onGenerateAnalysis}
+                            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                ) : analysisData ? (
+                    renderAnalysis(analysisData)
+                ) : (
+                    renderEmptyState()
+                )}
             </div>
-
-            {isLoading && (
-                <div className="flex flex-col items-center justify-center h-64">
-                    <Spinner />
-                    <p className="mt-4 text-teal-600 dark:text-teal-400">AI is analyzing your data... this may take a minute.</p>
-                </div>
-            )}
-
-            {error && (
-                <div className="bg-red-100 dark:bg-red-900/50 border border-red-300 dark:border-red-500 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg" role="alert">
-                    <strong className="font-bold">Analysis Failed: </strong>
-                    <span className="block sm:inline">{error}</span>
-                </div>
-            )}
-
-            {analysis && (
-                <div className="prose prose-sm md:prose-base max-w-none prose-slate dark:prose-invert bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg">
-                    <pre className="whitespace-pre-wrap font-sans">{analysis}</pre>
-                </div>
-            )}
-
-            {!analysis && !isLoading && !error && (
-                <div className="text-center py-10 text-slate-500 dark:text-slate-400">
-                    <p>Click "Generate Analysis" to get AI-powered insights on your financial data.</p>
-                </div>
-            )}
         </div>
     );
 };

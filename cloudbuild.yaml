@@ -6,12 +6,8 @@ steps:
       - '--tag=gcr.io/$PROJECT_ID/${_SERVICE_NAME}:${COMMIT_SHA}'
       - '--build-arg'
       - 'API_KEY=${_API_KEY}'
-      - '--build-arg'
-      - 'SUPABASE_URL=${_SUPABASE_URL}'
-      - '--build-arg'
-      - 'SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY}'
       - '.'
-    secretEnv: ['_API_KEY', '_SUPABASE_URL', '_SUPABASE_ANON_KEY']
+    secretEnv: ['_API_KEY']
 
   # Step 2: Push the Docker image to Google Container Registry
   - name: 'gcr.io/cloud-builders/docker'
@@ -34,11 +30,6 @@ availableSecrets:
   secretManager:
   - versionName: projects/$PROJECT_ID/secrets/${_SECRET_API_KEY_NAME}/versions/latest
     env: '_API_KEY'
-  - versionName: projects/$PROJECT_ID/secrets/${_SECRET_SUPABASE_URL_NAME}/versions/latest
-    env: '_SUPABASE_URL'
-  - versionName: projects/$PROJECT_ID/secrets/${_SECRET_SUPABASE_ANON_KEY_NAME}/versions/latest
-    env: '_SUPABASE_ANON_KEY'
-
 
 # Define the images to be pushed to the registry
 images:

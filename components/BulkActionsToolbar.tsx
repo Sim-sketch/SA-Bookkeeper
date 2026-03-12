@@ -1,6 +1,6 @@
 import React from 'react';
-import { TrashIcon } from './icons/TrashIcon';
-import { EditIcon } from './icons/EditIcon';
+import { TrashIcon } from './icons/TrashIcon.tsx';
+import { EditIcon } from './icons/EditIcon.tsx';
 
 interface BulkActionsToolbarProps {
     selectedCount: number;
@@ -21,7 +21,7 @@ const BulkActionsToolbar: React.FC<BulkActionsToolbarProps> = ({ selectedCount, 
                     <EditIcon className="w-4 h-4" />
                     Categorize
                 </button>
-                <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors bg-red-600 text-white hover:bg-red-500 shadow-sm">
+                <button onClick={onDelete} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors bg-red-600 text-white hover:bg-red-50 shadow-sm">
                     <TrashIcon className="w-4 h-4" />
                     Delete
                 </button>

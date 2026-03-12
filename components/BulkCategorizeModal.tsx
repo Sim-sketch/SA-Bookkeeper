@@ -1,9 +1,12 @@
+
 import React, { useState } from 'react';
+import { TAX_CATEGORIES } from '../types';
 
 export interface BulkUpdateData {
     debitAccount: string;
     creditAccount: string;
     category: string;
+    taxCategory: string;
 }
 
 interface BulkCategorizeModalProps {
@@ -21,31 +24,51 @@ const BulkCategorizeModal: React.FC<BulkCategorizeModalProps> = ({ isOpen, onClo
         debitAccount: '',
         creditAccount: '',
         category: '',
+        taxCategory: '',
     });
 
     if (!isOpen) return null;
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setUpdateData(prev => ({ ...prev, [name]: value }));
     };
     
     const handleApply = () => {
-        if (!updateData.debitAccount || !updateData.creditAccount || !updateData.category) {
-            alert('Please fill all fields to apply changes.');
+        const filledFields = Object.fromEntries(
+            // FIX: Cast value to string to allow use of .trim() method, resolving 'unknown' type error.
+            Object.entries(updateData).filter(([, value]) => (value as string).trim() !== '')
+        );
+
+        if (Object.keys(filledFields).length === 0) {
+            alert('Please fill at least one field to apply changes.');
             return;
         }
-        onApply(updateData);
+        // FIX: Use a double cast via 'unknown' to satisfy the prop's type signature, which expects a full object. This is a workaround for a type mismatch with the parent component.
+        onApply(filledFields as unknown as BulkUpdateData);
     };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-20" onClick={onClose}>
             <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
                 <h3 className="text-lg font-bold text-teal-600 dark:text-teal-300 mb-4">Bulk Categorize Transactions</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Only fill the fields you want to change. Leave fields blank to keep their original values.</p>
                 <div className="space-y-4">
                     <input type="text" name="debitAccount" value={updateData.debitAccount} onChange={handleChange} placeholder="New Debit Account" className={formInputClasses} />
                     <input type="text" name="creditAccount" value={updateData.creditAccount} onChange={handleChange} placeholder="New Credit Account" className={formInputClasses} />
                     <input type="text" name="category" value={updateData.category} onChange={handleChange} placeholder="New Category" className={formInputClasses} />
+                    
+                    <select 
+                        name="taxCategory" 
+                        value={updateData.taxCategory} 
+                        onChange={handleChange} 
+                        className={formInputClasses}
+                    >
+                        <option value="">No Change</option>
+                        {TAX_CATEGORIES.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                    </select>
                 </div>
                 <div className="flex justify-end gap-3 mt-6">
                     <button onClick={onClose} className={btnSecondaryClasses}>Cancel</button>

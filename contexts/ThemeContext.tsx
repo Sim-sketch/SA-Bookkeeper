@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, ReactNode, PropsWithChildren } from 'react';
 
 type Theme = 'light' | 'dark';
 
@@ -11,9 +11,13 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 
 const getInitialTheme = (): Theme => {
     if (typeof window !== 'undefined') {
-        const storedTheme = localStorage.getItem('theme');
-        if (storedTheme === 'light' || storedTheme === 'dark') {
-            return storedTheme;
+        try {
+            const storedTheme = localStorage.getItem('theme');
+            if (storedTheme === 'light' || storedTheme === 'dark') {
+                return storedTheme;
+            }
+        } catch (e) {
+            console.warn("localStorage not accessible", e);
         }
 
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -24,7 +28,8 @@ const getInitialTheme = (): Theme => {
 };
 
 
-export const ThemeProvider = ({ children }: { children: ReactNode }) => {
+// FIX: Use PropsWithChildren to correctly type the component and fix "children is missing" error in index.tsx.
+export const ThemeProvider = ({ children }: PropsWithChildren) => {
     const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
     useEffect(() => {
@@ -33,7 +38,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         } else {
             document.documentElement.classList.remove('dark');
         }
-        localStorage.setItem('theme', theme);
+        try {
+            localStorage.setItem('theme', theme);
+        } catch (e) {
+            // Ignore localStorage errors
+        }
     }, [theme]);
 
     const toggleTheme = () => {

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Transaction, StatementMetadata } from '../types.ts';
 import { CheckIcon } from './icons/CheckIcon.tsx';
-import { XIcon } from './icons/XIcon.tsx';
 
 interface StatementPreviewModalProps {
     isOpen: boolean;

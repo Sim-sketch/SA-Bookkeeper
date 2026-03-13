@@ -11,8 +11,6 @@ interface UserProfile {
 
 // --- Constants & Styling ---
 const PRIMARY_COLOR: [number, number, number] = [13, 148, 136]; // Teal 600 (#0d9488)
-const SECONDARY_COLOR: [number, number, number] = [30, 41, 59]; // Slate 800
-const HEADER_BG_COLOR: [number, number, number] = [240, 253, 244]; // Green 50
 const TEXT_COLOR: [number, number, number] = [15, 23, 42]; // Slate 900
 const TEXT_LIGHT: [number, number, number] = [100, 116, 139]; // Slate 500
 const BOTTOM_MARGIN = 40;

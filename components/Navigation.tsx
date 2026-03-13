@@ -1,10 +1,8 @@
 import React from 'react';
 import { View } from '../types.ts';
 import { BookIcon } from './icons/BookIcon.tsx';
-import { ChartIcon } from './icons/ChartIcon.tsx';
 import { AnalysisIcon } from './icons/AnalysisIcon.tsx';
 import { RulesIcon } from './icons/RulesIcon.tsx';
-import { TrendingUpIcon } from './icons/TrendingUpIcon.tsx';
 import { DashboardIcon } from './icons/DashboardIcon.tsx';
 import { SettingsIcon } from './icons/SettingsIcon.tsx';
 import { UsersIcon } from './icons/UsersIcon.tsx';
@@ -50,6 +48,10 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setView }) => {
         <nav className="p-2 bg-slate-100 dark:bg-slate-800/60 rounded-lg flex flex-wrap gap-2 justify-center md:justify-start">
             <NavButton label="Dashboard" view={View.DASHBOARD} activeView={activeView} setView={setView} icon={<DashboardIcon className="w-4 h-4" />}/>
             <NavButton label="Journal" view={View.JOURNAL} activeView={activeView} setView={setView} icon={<BookIcon className="w-4 h-4" />}/>
+            <NavButton label="Trial Balance" view={View.TRIAL_BALANCE} activeView={activeView} setView={setView} icon={<ScaleIcon className="w-4 h-4" />}/>
+            <NavButton label="P&L" view={View.PROFIT_LOSS} activeView={activeView} setView={setView} icon={<AnalysisIcon className="w-4 h-4" />}/>
+            <NavButton label="Balance Sheet" view={View.STATEMENTS} activeView={activeView} setView={setView} icon={<DocumentTextIcon className="w-4 h-4" />}/>
+            <NavButton label="Cash Flow" view={View.CASH_FLOW} activeView={activeView} setView={setView} icon={<BanknotesIcon className="w-4 h-4" />}/>
             <NavButton label="Reports" view={View.REPORTS} activeView={activeView} setView={setView} icon={<DocumentTextIcon className="w-4 h-4" />}/>
             <NavButton label="Invoices" view={View.INVOICES} activeView={activeView} setView={setView} icon={<DocumentDuplicateIcon className="w-4 h-4" />}/>
             <NavButton label="Payroll" view={View.PAYROLL} activeView={activeView} setView={setView} icon={<BanknotesIcon className="w-4 h-4" />}/>

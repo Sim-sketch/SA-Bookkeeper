@@ -48,7 +48,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onAddTask, onUpdateT
             dayArray.push(i);
         }
         return dayArray;
-    }, [currentDate, daysInMonth, firstDayOfMonth]);
+    }, [daysInMonth, firstDayOfMonth]);
 
     const prevMonth = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));

@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Spinner from './Spinner';
 import { CheckIcon } from './icons/CheckIcon';
 import { motion } from 'motion/react';
+import { updateCompanySettings } from '../services/apiService';
 
 type ViewMode = 'login' | 'signup' | 'verify';
 
@@ -31,6 +32,8 @@ const AuthView: React.FC = () => {
     const [viewMode, setViewMode] = useState<ViewMode>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [fullName, setFullName] = useState('');
+    const [companyName, setCompanyName] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
@@ -61,7 +64,18 @@ const AuthView: React.FC = () => {
             } else {
                 // Keep the email for the verification screen as user will be signed out
                 setVerificationEmail(email);
-                await signup({ email, password });
+                const userId = await signup({ email, password, fullName });
+                if (userId && companyName) {
+                    await updateCompanySettings(userId, {
+                        companyName,
+                        invoiceCounter: 1000,
+                        invoicePrefix: 'INV-',
+                        quoteCounter: 1000,
+                        quotePrefix: 'QTE-',
+                        poCounter: 1000,
+                        poPrefix: 'PO-'
+                    });
+                }
                 setViewMode('verify');
             }
         } catch (error: any) {
@@ -117,11 +131,12 @@ const AuthView: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col lg:flex-row font-sans">
-            <div className="hidden lg:flex w-full lg:w-1/2 bg-slate-900 relative overflow-hidden px-14 py-14 flex-col justify-between transition-colors duration-500">
+        <div className="min-h-screen flex flex-col lg:flex-row font-sans bg-white dark:bg-slate-950">
+            {/* Hero Section - Visible on all devices, but layout changes */}
+            <div className="w-full lg:w-1/2 bg-slate-900 relative overflow-hidden px-6 py-12 sm:px-14 sm:py-14 flex flex-col justify-center transition-colors duration-500">
                 <div className="absolute inset-0 bg-gradient-to-br from-teal-900 to-slate-950 opacity-90 z-0"></div>
-                <div className="relative z-10">
-                    <div className="mb-12 animate-fade-in">
+                <div className="relative z-10 space-y-8">
+                    <div className="animate-fade-in">
                          <div className="flex items-center gap-3">
                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">SA</div>
                              <span className="text-2xl font-bold text-white tracking-tight">Bookkeeper AI</span>
@@ -132,11 +147,11 @@ const AuthView: React.FC = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.8 }}
-                            className="text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight"
+                            className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight"
                         >
                             Smart accounting for <span className="text-emerald-400">South African</span> businesses.
                         </motion.h1>
-                        <div className="space-y-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
                             {features.map((feature, index) => (
                                 <FeatureItem 
                                     key={index}
@@ -147,18 +162,15 @@ const AuthView: React.FC = () => {
                             ))}
                         </div>
                     </div>
-                </div>
-                <div className="relative z-10 mt-12 flex items-center justify-between text-xs text-slate-400 animate-fade-in delay-300">
-                    <span>&copy; {new Date().getFullYear()} SA Bookkeeper AI. Secure & Private.</span>
+                    <div className="pt-8 text-xs text-slate-400 animate-fade-in">
+                        <span>&copy; {new Date().getFullYear()} SA Bookkeeper AI. Secure & Private.</span>
+                    </div>
                 </div>
             </div>
-            <div className="w-full lg:w-1/2 flex flex-col justify-center items-center bg-white dark:bg-slate-950 p-6 sm:p-10 lg:p-16 animate-fade-in">
+
+            {/* Form Section */}
+            <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 sm:p-10 lg:p-16 animate-fade-in">
                 <div className="w-full max-w-md space-y-8 flex flex-col h-full justify-center relative">
-                    <div className="lg:hidden flex flex-col items-center text-center mb-2">
-                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-teal-50 to-teal-700 flex items-center justify-center text-white font-bold text-xl shadow-md mb-3">SA</div>
-                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">SA Bookkeeper AI</h2>
-                    </div>
-                    
                     <div className="text-center lg:text-left mb-2">
                         <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white transition-all duration-300">
                             {viewMode === 'login' ? 'Welcome back' : viewMode === 'signup' ? 'Create an account' : 'Verify your email'}
@@ -218,6 +230,28 @@ const AuthView: React.FC = () => {
                         <>
                             <form className="mt-4 space-y-5" onSubmit={handleAuth}>
                                 <div className="space-y-5">
+                                    {viewMode === 'signup' && (
+                                        <>
+                                            <input 
+                                                type="text" 
+                                                required 
+                                                value={fullName} 
+                                                onChange={(e) => setFullName(e.target.value)} 
+                                                className={formInputClasses} 
+                                                placeholder="Full Name" 
+                                                disabled={loading} 
+                                            />
+                                            <input 
+                                                type="text" 
+                                                required 
+                                                value={companyName} 
+                                                onChange={(e) => setCompanyName(e.target.value)} 
+                                                className={formInputClasses} 
+                                                placeholder="Company Name" 
+                                                disabled={loading} 
+                                            />
+                                        </>
+                                    )}
                                     <input 
                                         type="email" 
                                         autoComplete="email" 
@@ -281,20 +315,6 @@ const AuthView: React.FC = () => {
                                     </svg>
                                     <span>Google</span>
                                 </button>
-                            </div>
-
-                            <div className="lg:hidden mt-12 pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
-                                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Key Features</h3>
-                                <div className="grid grid-cols-1 gap-4">
-                                    {features.map((f, i) => (
-                                        <div key={i} className="flex items-center gap-3">
-                                            <div className="h-6 w-6 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                                                <CheckIcon className="h-3.5 w-3.5 text-emerald-500" />
-                                            </div>
-                                            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{f.title}</span>
-                                        </div>
-                                    ))}
-                                </div>
                             </div>
                         </>
                     )}

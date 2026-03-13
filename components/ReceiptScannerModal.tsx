@@ -26,6 +26,7 @@ const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({ isOpen, onClo
             startCamera();
         }
         return () => stopCamera();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, capturedImage]);
 
     const startCamera = async () => {

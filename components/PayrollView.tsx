@@ -7,7 +7,6 @@ import { CheckIcon } from './icons/CheckIcon.tsx';
 import { XIcon } from './icons/XIcon.tsx';
 import { TrashIcon } from './icons/TrashIcon.tsx';
 import { EditIcon } from './icons/EditIcon.tsx';
-import { PdfIcon } from './icons/PdfIcon.tsx';
 import { calculatePAYE, calculateUIF } from '../utils/payrollUtils.ts';
 import { exportPayslipAsPDF } from '../utils/pdf.ts';
 import { useAuth } from '../contexts/AuthContext.tsx';

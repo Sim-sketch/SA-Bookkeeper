@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Spinner from './Spinner';
-import { TrashIcon } from './icons/TrashIcon';
-import { EditIcon } from './icons/EditIcon';
 import { updateCompanySettings, getProducts, addProduct, updateProduct, deleteProduct } from '../services/apiService';
 import { CompanySettings, Product } from '../types';
 

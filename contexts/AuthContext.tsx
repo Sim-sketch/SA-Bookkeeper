@@ -71,13 +71,15 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         }
     };
 
-    const signup = async ({ email, password }: any) => {
+    const signup = async ({ email, password, fullName }: any) => {
         setIsLoading(true);
         setError(null);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             if (userCredential.user) {
+                await updateProfile(userCredential.user, { displayName: fullName });
                 await sendEmailVerification(userCredential.user);
+                return userCredential.user.uid;
             }
         } catch (err: any) {
             setError(err.message || 'Signup failed');
@@ -147,6 +149,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = (): AuthContextType => {
     const context = useContext(AuthContext);
     if (context === undefined) {

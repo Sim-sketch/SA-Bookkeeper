@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Customer, CustomerStatus } from '../types';
 import { XIcon } from './icons/XIcon';
-import { CheckIcon } from './icons/CheckIcon';
 
 interface CustomersViewProps {
     customers: Customer[];

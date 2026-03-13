@@ -35,6 +35,7 @@ export interface Transaction {
     category: string;
     taxCategory: SaTaxCategory;
     sourceFileId?: string;
+    status: 'Draft' | 'Approved';
 }
 
 export type SaTaxCategory = 
@@ -364,14 +365,44 @@ export interface PayrollRun {
 }
 
 export const SA_CHART_OF_ACCOUNTS: SaAccount[] = [
+    // Assets
     { code: '1000', name: 'Bank Account', type: 'Asset' },
     { code: '1100', name: 'Accounts Receivable', type: 'Asset' },
+    { code: '1200', name: 'Inventory', type: 'Asset' },
+    { code: '1300', name: 'Petty Cash', type: 'Asset' },
+    { code: '1500', name: 'Fixed Assets - Cost', type: 'Asset' },
+    { code: '1550', name: 'Accumulated Depreciation', type: 'Asset' },
+    
+    // Liabilities
     { code: '2000', name: 'Accounts Payable', type: 'Liability' },
     { code: '2100', name: 'VAT Control Account', type: 'Liability' },
+    { code: '2200', name: 'SARS Income Tax Payable', type: 'Liability' },
+    { code: '2300', name: 'Payroll Liabilities (PAYE/UIF/SDL)', type: 'Liability' },
+    { code: '2400', name: 'Short-term Loans', type: 'Liability' },
+    { code: '2500', name: 'Long-term Liabilities', type: 'Liability' },
+    
+    // Equity
+    { code: '3000', name: 'Owner\'s Equity', type: 'Equity' },
+    { code: '3100', name: 'Retained Earnings', type: 'Equity' },
+    { code: '3200', name: 'Drawings', type: 'Equity' },
+    
+    // Income
     { code: '4000', name: 'Sales Revenue', type: 'Income' },
+    { code: '4100', name: 'Service Income', type: 'Income' },
+    { code: '4200', name: 'Interest Received', type: 'Income' },
+    { code: '4300', name: 'Other Income', type: 'Income' },
+    
+    // Expenses
     { code: '5000', name: 'Cost of Sales', type: 'Expense' },
     { code: '6000', name: 'Rent Expense', type: 'Expense' },
     { code: '6100', name: 'Salaries & Wages', type: 'Expense' },
     { code: '6200', name: 'Electricity & Water', type: 'Expense' },
     { code: '6300', name: 'Bank Charges', type: 'Expense' },
+    { code: '6400', name: 'Marketing & Advertising', type: 'Expense' },
+    { code: '6500', name: 'Telephone & Internet', type: 'Expense' },
+    { code: '6600', name: 'Repairs & Maintenance', type: 'Expense' },
+    { code: '6700', name: 'Depreciation Expense', type: 'Expense' },
+    { code: '6800', name: 'Insurance', type: 'Expense' },
+    { code: '6900', name: 'Professional Fees', type: 'Expense' },
+    { code: '7000', name: 'SARS Penalties & Interest', type: 'Expense' },
 ];

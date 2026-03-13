@@ -45,7 +45,7 @@ const AiChatView: React.FC<AiChatViewProps> = ({ transactions, checkApiKey, onCl
             };
             setMessages([greeting]);
         }
-    }, [user]); 
+    }, [user, messages.length]); 
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();

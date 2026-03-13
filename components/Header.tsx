@@ -4,15 +4,19 @@ import { useTheme } from '../contexts/ThemeContext.tsx';
 import { SunIcon } from './icons/SunIcon.tsx';
 import { MoonIcon } from './icons/MoonIcon.tsx';
 import { SearchIcon } from './icons/SearchIcon.tsx';
+import { EyeIcon } from './icons/EyeIcon.tsx';
+import { EyeOffIcon } from './icons/EyeOffIcon.tsx';
 
 interface HeaderProps {
     searchQuery?: string;
     onSearch?: (query: string) => void;
     logoUrl?: string;
     companyName?: string;
+    showAmounts?: boolean;
+    onToggleShowAmounts?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, logoUrl, companyName }) => {
+const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, logoUrl, companyName, showAmounts, onToggleShowAmounts }) => {
     const { user, logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
 
@@ -49,6 +53,16 @@ const Header: React.FC<HeaderProps> = ({ searchQuery, onSearch, logoUrl, company
                 )}
 
                 <div className="flex items-center gap-4 flex-shrink-0">
+                     {user && onToggleShowAmounts && (
+                         <button
+                            onClick={onToggleShowAmounts}
+                            className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            aria-label={showAmounts ? "Hide amounts" : "Show amounts"}
+                            title={showAmounts ? "Hide amounts" : "Show amounts"}
+                        >
+                            {showAmounts ? <EyeIcon className="w-5 h-5" /> : <EyeOffIcon className="w-5 h-5" />}
+                        </button>
+                     )}
                      <button
                         onClick={toggleTheme}
                         className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500"

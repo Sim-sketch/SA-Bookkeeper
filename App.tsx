@@ -86,6 +86,7 @@ const App: React.FC = () => {
         if (user) {
             loadData();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]);
 
     const loadData = async () => {
@@ -357,10 +358,12 @@ const App: React.FC = () => {
         );
     }, [transactions, searchQuery]);
 
-    const pnlData = useMemo(() => generateProfitAndLoss(filteredTransactions), [filteredTransactions]);
-    const trialBalanceData = useMemo(() => generateTrialBalance(filteredTransactions), [filteredTransactions]);
-    const balanceSheetData = useMemo(() => generateBalanceSheet(filteredTransactions, pnlData.netProfit), [filteredTransactions, pnlData]);
-    const cashFlowData = useMemo(() => generateCashFlowStatement(filteredTransactions, trialBalanceData), [filteredTransactions, trialBalanceData]);
+    const approvedTransactions = useMemo(() => transactions.filter(t => t.status === 'Approved'), [transactions]);
+
+    const pnlData = useMemo(() => generateProfitAndLoss(approvedTransactions), [approvedTransactions]);
+    const trialBalanceData = useMemo(() => generateTrialBalance(approvedTransactions), [approvedTransactions]);
+    const balanceSheetData = useMemo(() => generateBalanceSheet(approvedTransactions, pnlData.netProfit), [approvedTransactions, pnlData]);
+    const cashFlowData = useMemo(() => generateCashFlowStatement(approvedTransactions, trialBalanceData), [approvedTransactions, trialBalanceData]);
     const knownAccounts = useMemo(() => Array.from(new Set(transactions.map(t => t.debitAccount))), [transactions]);
 
     if (authLoading) {
@@ -377,13 +380,13 @@ const App: React.FC = () => {
 
     return (
         <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
-            <Header onSearch={setSearchQuery} searchQuery={searchQuery} companyName={companySettings?.companyName} logoUrl={companySettings?.logoUrl} />
+            <Header onSearch={setSearchQuery} searchQuery={searchQuery} companyName={companySettings?.companyName} logoUrl={companySettings?.logoUrl} showAmounts={showAmounts} onToggleShowAmounts={() => setShowAmounts(!showAmounts)} />
             <main className="flex-grow container mx-auto px-4 py-8 space-y-6">
                 <Navigation activeView={view} setView={setView} />
                 
-                {view === View.DASHBOARD && <DashboardView onFileAnalysis={handleFileAnalysis} transactions={filteredTransactions} pnlData={pnlData} showAmounts={showAmounts} onLaunchScanner={() => setIsReceiptScannerOpen(true)} />}
-                {view === View.JOURNAL && <JournalView transactions={filteredTransactions} onAddTransaction={handleAddTransaction} onUpdateTransaction={handleUpdateTransaction} onBulkDelete={handleBulkDelete} onBulkUpdate={handleBulkUpdate} knownAccounts={knownAccounts} onRefreshData={loadData} onUndo={handleUndo} onRedo={handleRedo} canUndo={past.length > 0} canRedo={future.length > 0} allTransactionsCount={transactions.length} onClearFilters={() => setSearchQuery('')} />}
-                {view === View.VAT_201 && <VatReportView transactions={filteredTransactions} />}
+                {view === View.DASHBOARD && <DashboardView onFileAnalysis={handleFileAnalysis} transactions={approvedTransactions} pnlData={pnlData} showAmounts={showAmounts} onLaunchScanner={() => setIsReceiptScannerOpen(true)} />}
+                {view === View.JOURNAL && <JournalView transactions={filteredTransactions} onAddTransaction={handleAddTransaction} onUpdateTransaction={handleUpdateTransaction} onBulkDelete={handleBulkDelete} onBulkUpdate={handleBulkUpdate} knownAccounts={knownAccounts} onRefreshData={loadData} onUndo={handleUndo} onRedo={handleRedo} canUndo={past.length > 0} canRedo={future.length > 0} allTransactionsCount={transactions.length} onClearFilters={() => setSearchQuery('')} pnlData={pnlData} balanceSheetData={balanceSheetData} trialBalanceData={trialBalanceData} cashFlowData={cashFlowData} showAmounts={showAmounts} />}
+                {view === View.VAT_201 && <VatReportView transactions={approvedTransactions} />}
                 {view === View.TRIAL_BALANCE && <TrialBalanceView data={trialBalanceData} showAmounts={showAmounts} />}
                 {view === View.PROFIT_LOSS && <ProfitAndLossView data={pnlData} showAmounts={showAmounts} />}
                 {view === View.CASH_FLOW && <CashFlowView data={cashFlowData} showAmounts={showAmounts} />}
@@ -394,9 +397,9 @@ const App: React.FC = () => {
                 {view === View.CUSTOMERS && <CustomersView customers={customers} onAddCustomer={(c) => addCustomer(user!.id, c).then(() => loadData())} onUpdateCustomer={(c) => updateCustomer(user!.id, c).then(() => loadData())} onDeleteCustomer={(id) => deleteCustomer(user!.id, id).then(() => loadData())} />}
                 {view === View.LEAD_SCRAPER && <LeadScraperView onAddCustomer={(c) => addCustomer(user!.id, c).then(() => loadData())} />}
                 {view === View.CALENDAR && <CalendarView tasks={tasks} onAddTask={(t) => addTask(user!.id, t).then(() => loadData())} onUpdateTask={(t) => updateTask(user!.id, t).then(() => loadData())} onDeleteTask={(id) => deleteTask(user!.id, id).then(() => loadData())} />}
-                {view === View.ANALYSIS && <AnalysisView analysisData={analysisData} isLoading={isAnalysisLoading} error={null} onGenerateAnalysis={handleGenerateAnalysis} transactions={filteredTransactions} />}
-                {view === View.REPORTS && <ReportsView transactions={filteredTransactions} pnlData={pnlData} balanceSheetData={balanceSheetData} trialBalanceData={trialBalanceData} cashFlowData={cashFlowData} analysisData={analysisData} onGenerateAnalysis={handleGenerateAnalysis} isAnalysisLoading={isAnalysisLoading} />}
-                {view === View.TEAM && <TeamView members={teamMembers} onInvite={(email, role, name) => Promise.resolve()} onRemove={(id) => removeTeamMember(user!.id, id).then(() => loadData())} />}
+                {view === View.ANALYSIS && <AnalysisView analysisData={analysisData} isLoading={isAnalysisLoading} error={null} onGenerateAnalysis={handleGenerateAnalysis} transactions={approvedTransactions} />}
+                {view === View.REPORTS && <ReportsView transactions={approvedTransactions} pnlData={pnlData} balanceSheetData={balanceSheetData} trialBalanceData={trialBalanceData} cashFlowData={cashFlowData} analysisData={analysisData} onGenerateAnalysis={handleGenerateAnalysis} isAnalysisLoading={isAnalysisLoading} />}
+                {view === View.TEAM && <TeamView members={teamMembers} onInvite={() => Promise.resolve()} onRemove={(id) => removeTeamMember(user!.id, id).then(() => loadData())} />}
                 {view === View.RULES && <RulesView rules={rules} onAddRule={(r) => addRule(user!.id, r).then(() => loadData())} onDeleteRule={(id) => deleteRule(user!.id, id).then(() => loadData())} knownAccounts={knownAccounts} />}
                 {view === View.SETTINGS && <SettingsView companySettings={companySettings} onUpdateSettings={(s) => { setCompSettings(s); updateCompanySettings(user.id, s); }} />}
                 {view === View.PRIVACY && <PrivacyView />}

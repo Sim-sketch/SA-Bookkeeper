@@ -148,6 +148,7 @@ const InvoicesView: React.FC<InvoicesViewProps> = ({ customers }) => {
                 setInvoices(prev => prev.map(inv => inv.id === invoiceData.id ? invoiceData : inv));
             } else {
                 // Remove placeholder number to let API generate it
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 const { number, ...newInvoicePayload } = invoiceData;
                 const newInv = await addInvoice(user.id, newInvoicePayload, currentInvoice.type);
                 setInvoices(prev => [newInv, ...prev]);

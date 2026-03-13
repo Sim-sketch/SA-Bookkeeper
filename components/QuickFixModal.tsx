@@ -46,7 +46,7 @@ const QuickFixModal: React.FC<QuickFixModalProps> = ({ isOpen, onClose, transact
         
         // Filter out empty fields
         const validUpdates = Object.fromEntries(
-            Object.entries(updates).filter(([_, v]) => (v as string).trim() !== '')
+            Object.entries(updates).filter(([, v]) => (v as string).trim() !== '')
         );
 
         if (Object.keys(validUpdates).length === 0) {

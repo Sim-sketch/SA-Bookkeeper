@@ -24,7 +24,7 @@ const InputField: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props
     />
 );
 
-const JournalRow: React.FC<JournalRowProps> = ({ transaction, isEditing, isSelected, onSelect, onEdit, onSave, onDelete, onCancel, knownAccounts = [] }) => {
+const JournalRow: React.FC<JournalRowProps> = ({ transaction, isEditing, isSelected, onSelect, onEdit, onSave, onDelete, onCancel }) => {
     const [editData, setEditData] = useState<Transaction>(transaction);
 
     useEffect(() => {
@@ -105,8 +105,26 @@ const JournalRow: React.FC<JournalRowProps> = ({ transaction, isEditing, isSelec
             <td className="px-6 py-4 whitespace-nowrap">{transaction.category}</td>
             <td className="px-6 py-4 whitespace-nowrap">{transaction.taxCategory}</td>
             <td className="px-6 py-4 text-right font-mono whitespace-nowrap">{transaction.amount.toFixed(2)}</td>
+            <td className="px-6 py-4 whitespace-nowrap">
+                <span className={`px-2 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider ${
+                    transaction.status === 'Approved' 
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                }`}>
+                    {transaction.status || 'Draft'}
+                </span>
+            </td>
             <td className={`px-6 py-4 text-center sticky right-0 transition-colors ${isSelected ? 'bg-teal-50 dark:bg-teal-900/40' : 'bg-white dark:bg-slate-900 group-hover:bg-slate-100/50 dark:group-hover:bg-slate-800/40'}`}>
                 <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {transaction.status !== 'Approved' && (
+                        <button 
+                            onClick={() => onSave({ ...transaction, status: 'Approved' })} 
+                            className="text-green-500 dark:text-green-400 hover:text-green-400 dark:hover:text-green-300" 
+                            title="Approve"
+                        >
+                            <CheckIcon className="w-4 h-4" />
+                        </button>
+                    )}
                     <button onClick={() => onEdit(transaction.id)} className="text-teal-500 dark:text-teal-400 hover:text-teal-400 dark:hover:text-teal-300" aria-label="Edit">
                         <EditIcon className="w-4 h-4" />
                     </button>

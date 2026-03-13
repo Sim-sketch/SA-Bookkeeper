@@ -1,15 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { Transaction } from '../types.ts';
+import { Transaction, PnlData, BalanceSheetData, TrialBalance, CashFlowData } from '../types.ts';
 import JournalRow from './JournalRow.tsx';
 import ManualTransactionForm from './ManualTransactionForm.tsx';
 import BulkActionsToolbar from './BulkActionsToolbar.tsx';
 import BulkCategorizeModal, { BulkUpdateData } from './BulkCategorizeModal.tsx';
 import QuickFixModal from './QuickFixModal.tsx';
-import { CheckIcon } from './icons/CheckIcon.tsx';
-import { XIcon } from './icons/XIcon.tsx';
+import FinancialSummaryPanel from './FinancialSummaryPanel.tsx';
 import { TrashIcon } from './icons/TrashIcon.tsx';
 import { WandIcon } from './icons/WandIcon.tsx';
 import { DownloadIcon } from './icons/DownloadIcon.tsx';
+import { CheckIcon } from './icons/CheckIcon.tsx';
 import { convertToCSV, downloadCSV } from '../utils/csv.ts';
 
 interface JournalViewProps {
@@ -19,7 +19,6 @@ interface JournalViewProps {
     onBulkDelete: (ids: string[]) => void;
     onBulkUpdate: (ids: string[], updateData: Partial<Omit<Transaction, 'id'>>) => void;
     knownAccounts?: string[];
-    onRefreshRules?: () => void;
     onUndo?: () => void;
     onRedo?: () => void;
     canUndo?: boolean;
@@ -28,6 +27,11 @@ interface JournalViewProps {
     onRefreshData?: () => void;
     onClearFilters?: () => void;
     onDeleteAll?: () => void;
+    pnlData: PnlData;
+    balanceSheetData: BalanceSheetData;
+    trialBalanceData: TrialBalance;
+    cashFlowData: CashFlowData;
+    showAmounts?: boolean;
 }
 
 const JournalView: React.FC<JournalViewProps> = ({ 
@@ -37,7 +41,6 @@ const JournalView: React.FC<JournalViewProps> = ({
     onBulkDelete, 
     onBulkUpdate,
     knownAccounts = [],
-    onRefreshRules,
     onUndo,
     onRedo,
     canUndo,
@@ -45,7 +48,12 @@ const JournalView: React.FC<JournalViewProps> = ({
     allTransactionsCount,
     onRefreshData,
     onClearFilters,
-    onDeleteAll
+    onDeleteAll,
+    pnlData,
+    balanceSheetData,
+    trialBalanceData,
+    cashFlowData,
+    showAmounts = true
 }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState(new Set<string>());
@@ -113,10 +121,23 @@ const JournalView: React.FC<JournalViewProps> = ({
         setIsDuplicateModalOpen(true);
     };
 
+    const handleBulkApprove = () => {
+        onBulkUpdate(Array.from(selectedIds), { status: 'Approved' });
+        setSelectedIds(new Set());
+    };
+
     const totalDebit = useMemo(() => displayedTransactions.reduce((acc, tx) => acc + tx.amount, 0), [displayedTransactions]);
     
     return (
         <div className="space-y-6">
+            <FinancialSummaryPanel 
+                pnlData={pnlData} 
+                balanceSheetData={balanceSheetData} 
+                trialBalanceData={trialBalanceData} 
+                cashFlowData={cashFlowData} 
+                showAmounts={showAmounts}
+            />
+            
             <ManualTransactionForm onAddTransaction={onAddTransaction} knownAccounts={knownAccounts} />
             
             <div className="flex flex-wrap items-center justify-end gap-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -151,6 +172,11 @@ const JournalView: React.FC<JournalViewProps> = ({
                 <button onClick={handleExportView} className="flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg text-teal-700 bg-teal-50">
                     <DownloadIcon className="w-3.5 h-3.5" /> Export
                 </button>
+                {selectedIds.size > 0 && (
+                    <button onClick={handleBulkApprove} className="flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg bg-green-600 text-white hover:bg-green-500">
+                        <CheckIcon className="w-3.5 h-3.5" /> Approve Selected ({selectedIds.size})
+                    </button>
+                )}
                 {onDeleteAll && <button onClick={onDeleteAll} className="px-3 py-1.5 text-xs border border-red-200 text-red-600 rounded-lg hover:bg-red-50">Clear Journal</button>}
             </div>
 
@@ -187,6 +213,7 @@ const JournalView: React.FC<JournalViewProps> = ({
                                 <th className="px-6 py-3">Credit</th>
                                 <th className="px-6 py-3">Category</th>
                                 <th className="px-6 py-3 text-right">Amount</th>
+                                <th className="px-6 py-3">Status</th>
                                 <th className="px-6 py-3 text-center">Actions</th>
                             </tr>
                         </thead>
@@ -199,7 +226,7 @@ const JournalView: React.FC<JournalViewProps> = ({
                             <tr className="font-bold bg-slate-50 dark:bg-slate-800/50">
                                 <td colSpan={6} className="px-6 py-4 text-right">Journal Total</td>
                                 <td className="px-6 py-4 text-right font-mono">R {totalDebit.toFixed(2)}</td>
-                                <td className="px-6 py-4"></td>
+                                <td colSpan={2} className="px-6 py-4"></td>
                             </tr>
                         </tfoot>
                     </table>

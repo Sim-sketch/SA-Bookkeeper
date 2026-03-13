@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ScrapedLead, Customer, CustomerStatus } from '../types';
+import { ScrapedLead, Customer } from '../types';
 import { searchBusinesses } from '../services/geminiService';
 import Spinner from './Spinner';
 import { MapIcon } from './icons/MapIcon';

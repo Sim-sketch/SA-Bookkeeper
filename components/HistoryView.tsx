@@ -3,7 +3,6 @@ import { StoredFile } from '../types.ts';
 import { TrashIcon } from './icons/TrashIcon.tsx';
 import { EditIcon } from './icons/EditIcon.tsx';
 import { FileJsonIcon } from './icons/FileJsonIcon.tsx'; 
-import { CheckIcon } from './icons/CheckIcon.tsx';
 import { DownloadIcon } from './icons/DownloadIcon.tsx';
 import { updateFileNotes } from '../services/fileService.ts';
 import { useAuth } from '../contexts/AuthContext.tsx';
@@ -13,13 +12,12 @@ interface HistoryViewProps {
     files: StoredFile[];
     onDeleteFile: (file: StoredFile) => void;
     onDeleteFiles?: (files: StoredFile[]) => void;
-    onDeleteAll?: () => void;
     onLoadSelected?: (fileIds: string[]) => void;
     activeFileIds?: string[];
     onRefresh?: () => void;
 }
 
-const HistoryView: React.FC<HistoryViewProps> = ({ files, onDeleteFile, onDeleteFiles, onDeleteAll, onLoadSelected, activeFileIds = [], onRefresh }) => {
+const HistoryView: React.FC<HistoryViewProps> = ({ files, onDeleteFile, onDeleteFiles, onLoadSelected, activeFileIds = [], onRefresh }) => {
     const { user } = useAuth();
     const [editingId, setEditingId] = useState<string | null>(null);
     const [notesBuffer, setNotesBuffer] = useState('');

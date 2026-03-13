@@ -70,6 +70,7 @@ const ManualTransactionForm: React.FC<ManualTransactionFormProps> = ({ onAddTran
             creditAccount,
             category,
             taxCategory: taxCategory as any,
+            status: 'Draft'
         });
         setFormData({ ...initialFormState, date: new Date().toISOString().split('T')[0] });
         setError(null);

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode, PropsWithChildren } from 'react';
+import React, { createContext, useState, useEffect, useContext, PropsWithChildren } from 'react';
 
 type Theme = 'light' | 'dark';
 
@@ -56,6 +56,7 @@ export const ThemeProvider = ({ children }: PropsWithChildren) => {
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
     const context = useContext(ThemeContext);
     if (!context) {

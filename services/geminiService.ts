@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Transaction, AnalyzedStatement, AnalyzedReceipt, FinancialAnalysis, AiChatResponse, ScrapedLead } from '../types.ts';
+import { Transaction, AnalyzedStatement, AnalyzedReceipt, FinancialAnalysis, AiChatResponse, ScrapedLead, SA_CHART_OF_ACCOUNTS } from '../types.ts';
 
 // Specialized instruction for high-accuracy OCR on SA Bank Statements
 const STATEMENT_SYSTEM_INSTRUCTION = `You are a high-speed South African Banking OCR agent.
@@ -12,6 +12,7 @@ EXTRACTION RULES:
 3. CLEANING: Remove branch codes, store IDs, and locations (e.g., "632005", "CPT", "JHB").
 4. DATES: strictly YYYY-MM-DD.
 5. CONSERVATION: Keep descriptions brief to save output space.
+6. CATEGORIZATION: Use the South African Standard Chart of Accounts: ${SA_CHART_OF_ACCOUNTS.map(a => `${a.name} (${a.code})`).join(', ')}.
 
 CRITICAL: If the list is long, STOP extracting before you hit your token limit. 
 ALWAYS ensure the JSON structure (brackets and braces) is closed correctly at the end of your response, even if you have to truncate the list.`;
@@ -224,7 +225,10 @@ export const searchBusinesses = async (query: string): Promise<ScrapedLead[]> =>
 
 export const suggestCategorization = async (description: string, amount: number, type: 'Debit' | 'Credit'): Promise<any> => {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.API_KEY });
-    const prompt = `Suggest accounts: "${description}" (R${amount}, ${type}).`;
+    const chartInfo = SA_CHART_OF_ACCOUNTS.map(a => `${a.name} (${a.code})`).join(', ');
+    const prompt = `Suggest South African standard accounts for: "${description}" (R${amount}, ${type}). 
+    Available Chart of Accounts: ${chartInfo}. 
+    Return JSON with debitAccount, creditAccount, category, and taxCategory.`;
 
     try {
         const response = await ai.models.generateContent({

@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { CategorizationRule, TRANSACTION_CATEGORIES } from '../types.ts';
-import { XIcon } from './icons/XIcon.tsx';
 import { WandIcon } from './icons/WandIcon.tsx';
 import { SearchIcon } from './icons/SearchIcon.tsx';
 import { EditIcon } from './icons/EditIcon.tsx';
